@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Sound Steps — Phonemic Awareness for ESL</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-32.png" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<meta name="theme-color" content="#007aff" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Sound Steps" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <header class="topbar">
+      <div class="brand">🔊 Sound Steps</div>
+      <div class="score-pill" id="scorePill" hidden>
+        <span id="scoreText">0 / 0</span>
+      </div>
+    </header>
+
+    <!-- HOME SCREEN -->
+    <section id="home" class="screen">
+      <h1>Let's listen.</h1>
+      <p class="subtitle">Type a word or tap a letter to hear it — then practice.</p>
+
+      <button id="exploreCta" class="explore-cta">
+        <span class="cta-icon">🔤</span>
+        <span class="cta-text">
+          <span class="cta-title">Sound Explorer</span>
+          <span class="cta-desc">Type any word and hear it, letter by letter</span>
+        </span>
+        <span class="row-chevron">›</span>
+      </button>
+
+      <h2 class="section-label">Practice</h2>
+      <div class="list-group">
+        <button class="list-row" data-activity="isolation">
+          <span class="row-icon icon-orange">🎯</span>
+          <span class="row-title">First Sound</span>
+          <span class="row-chevron">›</span>
+        </button>
+        <button class="list-row" data-activity="minimalpairs">
+          <span class="row-icon icon-blue">👂</span>
+          <span class="row-title">Sound Pairs</span>
+          <span class="row-chevron">›</span>
+        </button>
+        <button class="list-row" data-activity="rhymesong">
+          <span class="row-icon icon-purple">🎵</span>
+          <span class="row-title">Rhyme Song</span>
+          <span class="row-chevron">›</span>
+        </button>
+        <button class="list-row" data-activity="blending">
+          <span class="row-icon icon-green">🧩</span>
+          <span class="row-title">Blend It</span>
+          <span class="row-chevron">›</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- EXPLORE SCREEN -->
+    <section id="explore" class="screen" hidden>
+      <div class="quiz-header">
+        <button id="exploreBackBtn" class="link-btn">&larr; Back</button>
+      </div>
+
+      <h2 class="explore-heading">Type a word</h2>
+      <div class="word-box-row">
+        <input id="wordInput" class="word-input" type="text" maxlength="10"
+               placeholder="cat" autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <button id="hearWordBtn" class="hear-btn" aria-label="Hear word">🔊</button>
+      </div>
+      <div id="wordLetters" class="word-letters"></div>
+
+      <h2 class="explore-heading">Or tap a letter</h2>
+      <div id="letterGrid" class="letter-grid"></div>
+    </section>
+
+    <!-- RHYME SONG SCREEN -->
+    <section id="rhymesong" class="screen" hidden>
+      <div class="quiz-header">
+        <button id="songBackBtn" class="link-btn">&larr; Back</button>
+      </div>
+
+      <h2 class="explore-heading">Pick a word family</h2>
+      <div id="familyChips" class="family-chips"></div>
+
+      <h2 class="explore-heading">Tap words to add them</h2>
+      <div id="wordBank" class="word-bank"></div>
+
+      <h2 class="explore-heading">Your song</h2>
+      <div id="songLine" class="song-line"></div>
+
+      <div class="song-actions">
+        <button id="playSongBtn" class="next-btn">▶ Play My Song</button>
+        <button id="clearSongBtn" class="secondary-btn">Clear</button>
+      </div>
+    </section>
+
+    <!-- QUIZ SCREEN -->
+    <section id="quiz" class="screen" hidden>
+      <div class="quiz-header">
+        <button id="backBtn" class="link-btn">&larr; Back</button>
+        <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+        <div id="questionCount" class="q-count"></div>
+      </div>
+
+      <div class="quiz-body">
+        <h2 id="quizPrompt" class="quiz-prompt"></h2>
+
+        <button id="playSoundBtn" class="play-btn" aria-label="Play sound">
+          <span class="play-icon">▶</span> Listen
+        </button>
+
+        <div id="choices" class="choices"></div>
+
+        <div id="feedback" class="feedback" aria-live="polite"></div>
+
+        <button id="nextBtn" class="next-btn" hidden>Next →</button>
+      </div>
+    </section>
+
+    <!-- RESULTS SCREEN -->
+    <section id="results" class="screen" hidden>
+      <h1 id="resultsHeading">Session complete!</h1>
+      <p id="resultsSummary" class="subtitle"></p>
+      <div class="results-actions">
+        <button id="retryBtn" class="primary-btn">Try Again</button>
+        <button id="homeBtn" class="secondary-btn">Choose Another Activity</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
