@@ -255,6 +255,7 @@ const quizPrompt = document.getElementById("quizPrompt");
 const playSoundBtn = document.getElementById("playSoundBtn");
 const choicesEl = document.getElementById("choices");
 const feedbackEl = document.getElementById("feedback");
+const quizFooter = document.getElementById("quizFooter");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 const resultsHeading = document.getElementById("resultsHeading");
@@ -311,6 +312,7 @@ function renderQuestion() {
   quizPrompt.textContent = q.prompt;
   feedbackEl.textContent = "";
   feedbackEl.className = "feedback";
+  quizFooter.className = "quiz-footer";
   nextBtn.hidden = true;
 
   choicesEl.innerHTML = "";
@@ -337,10 +339,12 @@ function handleAnswer(btn, choice) {
     btn.classList.add("correct");
     feedbackEl.textContent = "Correct! 🎉";
     feedbackEl.className = "feedback correct";
+    quizFooter.className = "quiz-footer footer-correct";
   } else {
     btn.classList.add("incorrect");
     feedbackEl.textContent = "Not quite — listen again!";
     feedbackEl.className = "feedback incorrect";
+    quizFooter.className = "quiz-footer footer-incorrect";
     const correctBtn = buttons.find((b, i) => currentQuestion().choices[i].correct);
     if (correctBtn) correctBtn.classList.add("correct");
   }
@@ -382,7 +386,7 @@ backBtn.addEventListener("click", () => {
 retryBtn.addEventListener("click", () => startActivity(state.activity));
 homeBtn.addEventListener("click", () => showScreen("home"));
 
-document.querySelectorAll(".list-row").forEach((row) => {
+document.querySelectorAll(".path-node").forEach((row) => {
   row.addEventListener("click", () => {
     const activity = row.dataset.activity;
     if (activity === "rhymesong") {

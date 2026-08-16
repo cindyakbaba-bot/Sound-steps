@@ -7,11 +7,14 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icons/icon-32.png" />
 <link rel="apple-touch-icon" href="icons/icon-180.png" />
-<meta name="theme-color" content="#007aff" />
+<meta name="theme-color" content="#58cc02" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Sound Steps" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -26,7 +29,7 @@
 
     <!-- HOME SCREEN -->
     <section id="home" class="screen">
-      <h1>Let's listen.</h1>
+      <h1>Let's listen!</h1>
       <p class="subtitle">Type a word or tap a letter to hear it — then practice.</p>
 
       <button id="exploreCta" class="explore-cta">
@@ -35,31 +38,35 @@
           <span class="cta-title">Sound Explorer</span>
           <span class="cta-desc">Type any word and hear it, letter by letter</span>
         </span>
-        <span class="row-chevron">›</span>
+        <span class="cta-chevron">›</span>
       </button>
 
       <h2 class="section-label">Practice</h2>
-      <div class="list-group">
-        <button class="list-row" data-activity="isolation">
-          <span class="row-icon icon-orange">🎯</span>
-          <span class="row-title">First Sound</span>
-          <span class="row-chevron">›</span>
-        </button>
-        <button class="list-row" data-activity="minimalpairs">
-          <span class="row-icon icon-blue">👂</span>
-          <span class="row-title">Sound Pairs</span>
-          <span class="row-chevron">›</span>
-        </button>
-        <button class="list-row" data-activity="rhymesong">
-          <span class="row-icon icon-purple">🎵</span>
-          <span class="row-title">Rhyme Song</span>
-          <span class="row-chevron">›</span>
-        </button>
-        <button class="list-row" data-activity="blending">
-          <span class="row-icon icon-green">🧩</span>
-          <span class="row-title">Blend It</span>
-          <span class="row-chevron">›</span>
-        </button>
+      <div class="path">
+        <div class="path-node-wrap node-pos-1">
+          <button class="path-node node-orange" data-activity="isolation">
+            <span class="path-node-emoji">🎯</span>
+          </button>
+          <span class="path-label">First Sound</span>
+        </div>
+        <div class="path-node-wrap node-pos-2">
+          <button class="path-node node-blue" data-activity="minimalpairs">
+            <span class="path-node-emoji">👂</span>
+          </button>
+          <span class="path-label">Sound Pairs</span>
+        </div>
+        <div class="path-node-wrap node-pos-3">
+          <button class="path-node node-purple" data-activity="rhymesong">
+            <span class="path-node-emoji">🎵</span>
+          </button>
+          <span class="path-label">Rhyme Song</span>
+        </div>
+        <div class="path-node-wrap node-pos-4">
+          <button class="path-node node-green" data-activity="blending">
+            <span class="path-node-emoji">🧩</span>
+          </button>
+          <span class="path-label">Blend It</span>
+        </div>
       </div>
     </section>
 
@@ -118,10 +125,11 @@
         </button>
 
         <div id="choices" class="choices"></div>
+      </div>
 
+      <div id="quizFooter" class="quiz-footer">
         <div id="feedback" class="feedback" aria-live="polite"></div>
-
-        <button id="nextBtn" class="next-btn" hidden>Next →</button>
+        <button id="nextBtn" class="next-btn" hidden>Next</button>
       </div>
     </section>
 

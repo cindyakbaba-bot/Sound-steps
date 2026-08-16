@@ -1,4 +1,4 @@
-const CACHE_NAME = "sound-steps-v3";
+const CACHE_NAME = "sound-steps-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
