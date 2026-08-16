@@ -44,16 +44,18 @@ const WORD_FAMILIES = [
   { label: "-op", words: ["hop", "top", "mop", "pop", "stop"] },
 ];
 
-// Blending: word + approximate phonetic chunks for TTS + distractor whole-words
+// Blending: word + distractor whole-words. The word is spelled out letter by
+// letter (using the same recorded letter sounds as the Sound Explorer) then
+// spoken whole — see playCurrentAudio()'s spellWord handling.
 const BLEND_WORDS = [
-  { word: "cat", chunks: ["kuh", "aa", "tuh"], distractors: ["dog", "sun"] },
-  { word: "map", chunks: ["muh", "aa", "puh"], distractors: ["cup", "bed"] },
-  { word: "sun", chunks: ["suh", "uh", "nuh"], distractors: ["cat", "top"] },
-  { word: "dog", chunks: ["duh", "oh", "guh"], distractors: ["pig", "van"] },
-  { word: "bed", chunks: ["buh", "eh", "duh"], distractors: ["hat", "net"] },
-  { word: "pin", chunks: ["puh", "ih", "nuh"], distractors: ["cup", "dog"] },
-  { word: "top", chunks: ["tuh", "oh", "puh"], distractors: ["bed", "sun"] },
-  { word: "cup", chunks: ["kuh", "uh", "puh"], distractors: ["cat", "leg"] },
+  { word: "cat", distractors: ["dog", "sun"] },
+  { word: "map", distractors: ["cup", "bed"] },
+  { word: "sun", distractors: ["cat", "top"] },
+  { word: "dog", distractors: ["pig", "van"] },
+  { word: "bed", distractors: ["hat", "net"] },
+  { word: "pin", distractors: ["cup", "dog"] },
+  { word: "top", distractors: ["bed", "sun"] },
+  { word: "cup", distractors: ["cat", "leg"] },
 ];
 
 const QUESTIONS_PER_SESSION = 8;
@@ -71,7 +73,56 @@ const LETTER_SOUNDS = {
   v: "vuh", w: "wuh", x: "ks", y: "yuh", z: "zuh",
 };
 
+// Words with a real recorded clip at audio/words/{word}.mp3 (generated from
+// a local neural TTS voice — see audio/README.md). Anything not in this set
+// falls back to the browser's built-in speech synthesis, which is why the
+// Sound Explorer still works for arbitrary typed words.
+const WORD_AUDIO = new Set([
+  "bad", "bat", "beat", "bed", "bee", "berry", "big", "bit", "boat", "bun",
+  "cat", "cheap", "chip", "cup", "cut", "dig", "dog", "fan", "feel", "fill",
+  "fin", "fine", "fish", "fog", "free", "frog", "fun", "gum", "hat", "hop",
+  "hot", "jam", "jog", "kite", "leave", "leg", "lice", "light", "live",
+  "load", "log", "map", "mat", "mop", "net", "pig", "pin", "pop", "rat",
+  "red", "rice", "right", "road", "run", "sat", "seat", "see", "sheep",
+  "ship", "sink", "sit", "stop", "sun", "thin", "think", "three", "top",
+  "tree", "van", "very", "vine", "vote", "wig", "win", "zoo",
+]);
+
 /* ---------- Speech ---------- */
+
+// A single shared "now playing" clip so overlapping taps interrupt cleanly,
+// the same way speechSynthesis.cancel() interrupts a queued utterance.
+let activeClip = null;
+
+function playClip(url, { rate = 1, pause = 0 } = {}) {
+  return new Promise((resolve) => {
+    if (activeClip) activeClip.pause();
+    const audio = new Audio(url);
+    activeClip = audio;
+    audio.playbackRate = rate;
+    const done = () => {
+      if (activeClip === audio) activeClip = null;
+      setTimeout(resolve, pause);
+    };
+    audio.onended = done;
+    audio.onerror = done;
+    audio.play().catch(done);
+  });
+}
+
+function speakLetter(letter, { rate = 1, pause = 0 } = {}) {
+  return playClip(`audio/letters/${letter}.mp3`, { rate, pause }).catch(() =>
+    speak(LETTER_SOUNDS[letter] || letter, { pause })
+  );
+}
+
+function speakWord(word, { rate = 1, pitch = 1, pause = 0 } = {}) {
+  const normalized = word.toLowerCase();
+  if (WORD_AUDIO.has(normalized)) {
+    return playClip(`audio/words/${normalized}.mp3`, { rate, pause });
+  }
+  return speak(word, { rate: rate * 0.85, pitch, pause });
+}
 
 // speechSynthesis.getVoices() is often empty until the async "voiceschanged"
 // event fires — cache it and re-pick once real voices are available so we
@@ -104,12 +155,6 @@ function speak(text, { rate = 0.85, pitch = 1, pause = 0 } = {}) {
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
   });
-}
-
-async function speakSequence(parts, gapMs = 350) {
-  for (let i = 0; i < parts.length; i++) {
-    await speak(parts[i], { pause: i < parts.length - 1 ? gapMs : 0 });
-  }
 }
 
 /* ---------- Utilities ---------- */
@@ -166,7 +211,7 @@ function buildBlendQuestion() {
   ]);
   return {
     prompt: "Listen to the sounds. What word do they make?",
-    playSequence: item.chunks,
+    spellWord: item.word,
     choices,
   };
 }
@@ -245,10 +290,13 @@ function currentQuestion() {
 async function playCurrentAudio() {
   const q = currentQuestion();
   playSoundBtn.disabled = true;
-  if (q.playSequence) {
-    await speakSequence(q.playSequence);
+  if (q.spellWord) {
+    for (const letter of q.spellWord) {
+      await speakLetter(letter, { pause: 120 });
+    }
+    await speakWord(q.spellWord);
   } else {
-    await speak(q.playText);
+    await speakWord(q.playText);
   }
   playSoundBtn.disabled = false;
 }
@@ -371,7 +419,7 @@ Object.keys(LETTER_SOUNDS).forEach((letter) => {
   btn.textContent = letter;
   btn.addEventListener("click", async () => {
     btn.classList.add("playing");
-    await speak(LETTER_SOUNDS[letter], { rate: 0.75 });
+    await speakLetter(letter);
     btn.classList.remove("playing");
   });
   letterGridEl.appendChild(btn);
@@ -393,11 +441,11 @@ async function playWord(rawWord) {
   hearWordBtn.disabled = true;
   for (let i = 0; i < word.length; i++) {
     tiles[i].classList.add("active");
-    await speak(LETTER_SOUNDS[word[i]] || word[i], { rate: 0.75, pause: 120 });
+    await speakLetter(word[i], { pause: 120 });
     tiles[i].classList.remove("active");
   }
   tiles.forEach((t) => t.classList.add("active"));
-  await speak(word, { rate: 0.85 });
+  await speakWord(word);
   tiles.forEach((t) => t.classList.remove("active"));
   hearWordBtn.disabled = false;
 }
@@ -448,7 +496,7 @@ function renderWordBank() {
     tile.className = "bank-tile";
     tile.textContent = word;
     tile.addEventListener("click", () => {
-      speak(word, { rate: 0.9 });
+      speakWord(word);
       songState.words.push(word);
       renderSongLine();
     });
@@ -484,8 +532,8 @@ async function playSong() {
   const tiles = [...songLineEl.querySelectorAll(".song-tile")];
   for (let i = 0; i < songState.words.length; i++) {
     tiles[i]?.classList.add("singing");
-    await speak(songState.words[i], {
-      rate: 0.8,
+    await speakWord(songState.words[i], {
+      rate: i % 2 === 0 ? 1.15 : 0.88,
       pitch: i % 2 === 0 ? 1.25 : 0.9,
       pause: 220,
     });
