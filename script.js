@@ -59,16 +59,16 @@ const BLEND_WORDS = [
 const QUESTIONS_PER_SESSION = 8;
 
 // Approximate phonetic sound for each letter, for the Sound Explorer.
-// Continuant sounds (can be stretched: f, h, l, m, n, r, s, v, z) are
-// repeated to encourage a held, isolable sound rather than a clipped one —
-// the same "stretch the sound" convention used in Jolly Phonics-style
-// instruction. Stop sounds (b, c, d, g, k, p, t...) keep a light trailing
-// schwa since they can't be held on their own.
+// Each entry is a single short nonsense syllable rather than a repeated
+// letter (e.g. "muh" not "mmmm") — repeated-letter strings aren't real
+// words, so many TTS engines fall back to spelling them out letter by
+// letter instead of holding the sound, which is heard as the sound
+// stuttering/repeating.
 const LETTER_SOUNDS = {
-  a: "a", b: "buh", c: "kuh", d: "duh", e: "eh", f: "ffff", g: "guh",
-  h: "hhh", i: "ih", j: "juh", k: "kuh", l: "llll", m: "mmmm", n: "nnnn",
-  o: "aw", p: "puh", q: "kwuh", r: "rrrr", s: "sssss", t: "tuh", u: "uh",
-  v: "vvvv", w: "wuh", x: "ks", y: "yuh", z: "zzzz",
+  a: "a", b: "buh", c: "kuh", d: "duh", e: "eh", f: "fuh", g: "guh",
+  h: "huh", i: "ih", j: "juh", k: "kuh", l: "luh", m: "muh", n: "nuh",
+  o: "aw", p: "puh", q: "kwuh", r: "ruh", s: "suh", t: "tuh", u: "uh",
+  v: "vuh", w: "wuh", x: "ks", y: "yuh", z: "zuh",
 };
 
 /* ---------- Speech ---------- */
