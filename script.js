@@ -449,29 +449,32 @@ exploreBackBtn.addEventListener("click", () => {
   showScreen("home");
 });
 
-// Short/long mode for the letter grid's vowel tiles — consonants are
-// unaffected, and always play their one sound regardless of this.
-let explorerVowelVariant = "short";
-
-const vowelToggleBtns = document.querySelectorAll(".vowel-toggle-btn");
-vowelToggleBtns.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    explorerVowelVariant = btn.dataset.variant;
-    vowelToggleBtns.forEach((b) => b.classList.toggle("active", b === btn));
-  });
-});
-
-// Build the tap-a-letter grid once
-Object.keys(LETTER_SOUNDS).forEach((letter) => {
+// Build the tap-a-letter grid once. Vowels render as a split tile — one
+// half for the short sound, one half for the long sound — so both are
+// visible and tappable at once instead of needing a separate mode switch.
+function makeSoundButton(letter, variant, extraClass) {
   const btn = document.createElement("button");
-  btn.className = "letter-tile";
+  btn.className = extraClass;
   btn.textContent = letter;
+  if (variant) btn.setAttribute("aria-label", `${letter}, ${variant} sound`);
   btn.addEventListener("click", async () => {
     btn.classList.add("playing");
-    await speakLetter(letter, { variant: VOWELS.has(letter) ? explorerVowelVariant : undefined });
+    await speakLetter(letter, { variant });
     btn.classList.remove("playing");
   });
-  letterGridEl.appendChild(btn);
+  return btn;
+}
+
+Object.keys(LETTER_SOUNDS).forEach((letter) => {
+  if (VOWELS.has(letter)) {
+    const wrap = document.createElement("div");
+    wrap.className = "letter-tile vowel-split";
+    wrap.appendChild(makeSoundButton(letter, "short", "vowel-half vowel-half-short"));
+    wrap.appendChild(makeSoundButton(letter, "long", "vowel-half vowel-half-long"));
+    letterGridEl.appendChild(wrap);
+  } else {
+    letterGridEl.appendChild(makeSoundButton(letter, undefined, "letter-tile"));
+  }
 });
 
 async function playWord(rawWord) {

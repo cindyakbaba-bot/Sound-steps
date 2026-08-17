@@ -263,40 +263,26 @@ body {
   transform: scale(1.1);
 }
 
-.vowel-toggle-hint {
-  color: var(--muted);
+.vowel-legend {
+  display: flex;
+  gap: 18px;
+  margin: 0 0 14px;
   font-size: 0.9rem;
-  font-weight: 600;
-  margin: 0 0 10px;
+  font-weight: 700;
+  color: var(--muted);
 }
 
-.vowel-toggle {
-  display: inline-flex;
-  gap: 8px;
-  margin-bottom: 16px;
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
 }
 
-.vowel-toggle-btn {
-  background: white;
-  border: 2px solid var(--border);
-  border-bottom-width: 4px;
-  border-radius: 999px;
-  padding: 9px 20px;
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--ink);
-  cursor: pointer;
-  font-family: inherit;
-  transition: transform 0.05s ease, background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-}
-
-.vowel-toggle-btn:active { transform: translateY(2px); }
-
-.vowel-toggle-btn.active {
-  background: var(--blue);
-  border-color: var(--blue-dark);
-  color: white;
-}
+.legend-short { background: var(--red); }
+.legend-long { background: var(--blue); }
 
 .letter-grid {
   display: grid;
@@ -325,6 +311,54 @@ body {
   border-color: var(--primary-dark);
   color: white;
   transform: translateY(2px);
+}
+
+/* Vowel tiles: one tile, two sounds — split diagonally so short and long
+   are both visible and tappable without a separate mode switch. */
+.vowel-split {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  background: none;
+}
+
+.vowel-half {
+  position: absolute;
+  inset: 0;
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  padding: 5px;
+  transition: filter 0.1s ease;
+}
+
+.vowel-half-short {
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%);
+  background: #ffe3e3;
+  color: var(--red-dark);
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-top: 4px;
+  padding-right: 6px;
+}
+
+.vowel-half-long {
+  clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
+  background: #dcf1ff;
+  color: var(--blue-dark);
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding-bottom: 4px;
+  padding-left: 6px;
+}
+
+.vowel-half:active,
+.vowel-half.playing {
+  filter: brightness(0.9);
 }
 
 /* Rhyme Song builder */
