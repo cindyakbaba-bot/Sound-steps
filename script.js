@@ -61,16 +61,33 @@ const BLEND_WORDS = [
 const QUESTIONS_PER_SESSION = 8;
 
 // Approximate phonetic sound for each letter, for the Sound Explorer.
-// Each entry is a single short nonsense syllable rather than a repeated
+// Consonants are a single short nonsense syllable rather than a repeated
 // letter (e.g. "muh" not "mmmm") — repeated-letter strings aren't real
 // words, so many TTS engines fall back to spelling them out letter by
 // letter instead of holding the sound, which is heard as the sound
 // stuttering/repeating.
+//
+// Vowels get both a short sound (a as in "bed") and a long sound (a vowel
+// saying its own letter name, e.g. long e as in "see"), since English vowels
+// genuinely have both and a single guessed sound was both incomplete and,
+// per user testing, mispronounced. Each is a real dictionary word rather
+// than an invented fragment, and long-vowel words are literally the letter's
+// own name spoken aloud — this is deliberate, not a fallback: real words hit
+// the TTS engine's dictionary lookup instead of its much less predictable
+// letter-to-sound guessing rules that invented spellings like "eh"/"ih" fall
+// back to.
+const VOWELS = new Set(["a", "e", "i", "o", "u"]);
+
 const LETTER_SOUNDS = {
-  a: "a", b: "buh", c: "kuh", d: "duh", e: "eh", f: "fuh", g: "guh",
-  h: "huh", i: "ih", j: "juh", k: "kuh", l: "luh", m: "muh", n: "nuh",
-  o: "aw", p: "puh", q: "kwuh", r: "ruh", s: "suh", t: "tuh", u: "uh",
-  v: "vuh", w: "wuh", x: "ks", y: "yuh", z: "zuh",
+  a: { short: "at", long: "hey" },
+  e: { short: "end", long: "ee" },
+  i: { short: "it", long: "kite" },
+  o: { short: "on", long: "oh" },
+  u: { short: "cup", long: "you" },
+  b: "buh", c: "kuh", d: "duh", f: "fuh", g: "guh", h: "huh",
+  j: "juh", k: "kuh", l: "luh", m: "muh", n: "nuh", p: "puh",
+  q: "kwuh", r: "ruh", s: "suh", t: "tuh", v: "vuh", w: "wuh",
+  x: "ks", y: "yuh", z: "zuh",
 };
 
 // Words with a real recorded clip at audio/words/{word}.mp3 (generated from
@@ -95,31 +112,47 @@ const WORD_AUDIO = new Set([
 let activeClip = null;
 
 function playClip(url, { rate = 1, pause = 0 } = {}) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (activeClip) activeClip.pause();
     const audio = new Audio(url);
     activeClip = audio;
     audio.playbackRate = rate;
-    const done = () => {
+    const finish = (ok) => {
       if (activeClip === audio) activeClip = null;
-      setTimeout(resolve, pause);
+      setTimeout(ok ? resolve : reject, pause);
     };
-    audio.onended = done;
-    audio.onerror = done;
-    audio.play().catch(done);
+    audio.onended = () => finish(true);
+    audio.onerror = () => finish(false);
+    audio.play().catch(() => finish(false));
   });
 }
 
-function speakLetter(letter, { rate = 1, pause = 0 } = {}) {
-  return playClip(`audio/letters/${letter}.mp3`, { rate, pause }).catch(() =>
-    speak(LETTER_SOUNDS[letter] || letter, { pause })
+// Vowels use audio/letters/{letter}.mp3 for the short sound (the default —
+// also what every consonant uses) and audio/letters/{letter}_long.mp3 for
+// the long sound. variant is ignored for consonants, which only have one.
+function letterAudioFile(letter, variant) {
+  if (variant === "long" && VOWELS.has(letter)) return `audio/letters/${letter}_long.mp3`;
+  return `audio/letters/${letter}.mp3`;
+}
+
+function fallbackSoundText(letter, variant) {
+  const entry = LETTER_SOUNDS[letter];
+  if (entry && typeof entry === "object") return entry[variant === "long" ? "long" : "short"];
+  return entry || letter;
+}
+
+function speakLetter(letter, { rate = 1, pause = 0, variant } = {}) {
+  return playClip(letterAudioFile(letter, variant), { rate, pause }).catch(() =>
+    speak(fallbackSoundText(letter, variant), { pause })
   );
 }
 
 function speakWord(word, { rate = 1, pitch = 1, pause = 0 } = {}) {
   const normalized = word.toLowerCase();
   if (WORD_AUDIO.has(normalized)) {
-    return playClip(`audio/words/${normalized}.mp3`, { rate, pause });
+    return playClip(`audio/words/${normalized}.mp3`, { rate, pause }).catch(() =>
+      speak(word, { rate: rate * 0.85, pitch, pause })
+    );
   }
   return speak(word, { rate: rate * 0.85, pitch, pause });
 }
@@ -416,6 +449,18 @@ exploreBackBtn.addEventListener("click", () => {
   showScreen("home");
 });
 
+// Short/long mode for the letter grid's vowel tiles — consonants are
+// unaffected, and always play their one sound regardless of this.
+let explorerVowelVariant = "short";
+
+const vowelToggleBtns = document.querySelectorAll(".vowel-toggle-btn");
+vowelToggleBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    explorerVowelVariant = btn.dataset.variant;
+    vowelToggleBtns.forEach((b) => b.classList.toggle("active", b === btn));
+  });
+});
+
 // Build the tap-a-letter grid once
 Object.keys(LETTER_SOUNDS).forEach((letter) => {
   const btn = document.createElement("button");
@@ -423,7 +468,7 @@ Object.keys(LETTER_SOUNDS).forEach((letter) => {
   btn.textContent = letter;
   btn.addEventListener("click", async () => {
     btn.classList.add("playing");
-    await speakLetter(letter);
+    await speakLetter(letter, { variant: VOWELS.has(letter) ? explorerVowelVariant : undefined });
     btn.classList.remove("playing");
   });
   letterGridEl.appendChild(btn);

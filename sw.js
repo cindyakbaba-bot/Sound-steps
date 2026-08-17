@@ -1,4 +1,4 @@
-const CACHE_NAME = "sound-steps-v4";
+const CACHE_NAME = "sound-steps-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -33,6 +33,11 @@ const APP_SHELL = [
   "./audio/letters/x.mp3",
   "./audio/letters/y.mp3",
   "./audio/letters/z.mp3",
+  "./audio/letters/a_long.mp3",
+  "./audio/letters/e_long.mp3",
+  "./audio/letters/i_long.mp3",
+  "./audio/letters/o_long.mp3",
+  "./audio/letters/u_long.mp3",
   "./audio/words/bad.mp3",
   "./audio/words/bat.mp3",
   "./audio/words/beat.mp3",
