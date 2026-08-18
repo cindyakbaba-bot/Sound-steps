@@ -95,6 +95,28 @@ const SEGMENTING_WORDS = [
   { word: "frog", count: 4 },
 ];
 
+// "Magic E" words (CVCe): a silent e at the end makes the vowel say its own
+// name — the standard next phonics step after digraphs. Each word already
+// went through the same generate-then-verify-with-whisper pipeline as the
+// vowel-sound fix; a few candidates (bone, home, joke, lake) kept coming
+// back mispronounced or as a different word no matter how many times they
+// were regenerated, so they were dropped rather than shipped unheard.
+const CVCE_WORDS = [
+  { word: "cake", vowel: "a" }, { word: "gate", vowel: "a" },
+  { word: "name", vowel: "a" }, { word: "game", vowel: "a" },
+  { word: "tape", vowel: "a" }, { word: "plate", vowel: "a" },
+  { word: "cave", vowel: "a" },
+  { word: "bike", vowel: "i" }, { word: "kite", vowel: "i" },
+  { word: "five", vowel: "i" }, { word: "time", vowel: "i" },
+  { word: "ride", vowel: "i" }, { word: "line", vowel: "i" },
+  { word: "smile", vowel: "i" }, { word: "hive", vowel: "i" },
+  { word: "rope", vowel: "o" }, { word: "nose", vowel: "o" },
+  { word: "hole", vowel: "o" }, { word: "note", vowel: "o" },
+  { word: "rose", vowel: "o" },
+  { word: "cube", vowel: "u" }, { word: "mule", vowel: "u" },
+  { word: "tube", vowel: "u" }, { word: "cute", vowel: "u" },
+];
+
 const QUESTIONS_PER_SESSION = 8;
 
 // Approximate phonetic sound for each letter, for the Sound Explorer.
@@ -146,6 +168,11 @@ const WORD_AUDIO = new Set([
   "red", "rice", "right", "road", "run", "sat", "seat", "see", "sheep",
   "ship", "sink", "sit", "stop", "sun", "thin", "think", "three", "top",
   "tree", "van", "very", "vine", "vote", "wig", "win", "zoo",
+  // Magic E (CVCe) words
+  "cake", "gate", "name", "game", "tape", "plate", "cave",
+  "bike", "five", "time", "ride", "line", "smile", "hive",
+  "rope", "nose", "hole", "note", "rose",
+  "cube", "mule", "tube", "cute",
 ]);
 
 /* ---------- Speech ---------- */
@@ -322,6 +349,20 @@ function buildDigraphQuestion() {
   };
 }
 
+function buildLongVowelQuestion() {
+  const item = CVCE_WORDS[Math.floor(Math.random() * CVCE_WORDS.length)];
+  const distractors = pickN(["a", "e", "i", "o", "u"].filter((v) => v !== item.vowel), 2);
+  const choices = shuffle([
+    { label: item.vowel, correct: true },
+    ...distractors.map((v) => ({ label: v, correct: false })),
+  ]);
+  return {
+    prompt: "The silent e makes a vowel say its name. Which vowel?",
+    playText: item.word,
+    choices,
+  };
+}
+
 function buildSegmentingQuestion() {
   const item = SEGMENTING_WORDS[Math.floor(Math.random() * SEGMENTING_WORDS.length)];
   const distractorCounts = pickN([1, 2, 3, 4, 5].filter((n) => n !== item.count), 2);
@@ -342,6 +383,7 @@ const BUILDERS = {
   blending: buildBlendQuestion,
   segmenting: buildSegmentingQuestion,
   digraphs: buildDigraphQuestion,
+  longvowel: buildLongVowelQuestion,
 };
 
 const ACTIVITY_TITLES = {
@@ -350,6 +392,7 @@ const ACTIVITY_TITLES = {
   blending: "Blend It",
   segmenting: "Count Sounds",
   digraphs: "Digraph Sounds",
+  longvowel: "Magic E",
 };
 
 /* ---------- App state ---------- */
