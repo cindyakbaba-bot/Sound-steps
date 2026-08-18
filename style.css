@@ -15,6 +15,7 @@
   --red: #ff4b4b;
   --red-dark: #d43838;
   --yellow: #ffc800;
+  --yellow-dark: #d6a700;
   --border: #e5e5e5;
   --radius: 16px;
 }
@@ -148,6 +149,7 @@ body {
 .node-pos-3 { align-self: center; }
 .node-pos-4 { align-self: flex-end; margin-right: 12%; }
 .node-pos-5 { align-self: center; }
+.node-pos-6 { align-self: flex-start; margin-left: 12%; }
 
 .path-node {
   width: 84px;
@@ -176,6 +178,8 @@ body {
 .node-green:active { box-shadow: 0 2px 0 var(--primary-dark); }
 .node-red { background: var(--red); box-shadow: 0 8px 0 var(--red-dark); }
 .node-red:active { box-shadow: 0 2px 0 var(--red-dark); }
+.node-yellow { background: var(--yellow); box-shadow: 0 8px 0 var(--yellow-dark); }
+.node-yellow:active { box-shadow: 0 2px 0 var(--yellow-dark); }
 
 .path-label {
   font-weight: 800;
@@ -314,6 +318,11 @@ body {
   border-color: var(--primary-dark);
   color: white;
   transform: translateY(2px);
+}
+
+.digraph-grid .letter-tile {
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
 }
 
 /* Vowel tiles: one tile, two sounds — split diagonally so short and long

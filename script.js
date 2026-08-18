@@ -125,6 +125,12 @@ const LETTER_SOUNDS = {
   j: "juh", k: "kuh", l: "luh", m: "muh", n: "nuh", p: "puh",
   q: "kwuh", r: "ruh", s: "suh", t: "tuh", v: "vuh", w: "wuh",
   x: "ks", y: "yuh", z: "zuh",
+  // Digraphs — two letters that make one new sound. These reuse the exact
+  // same audio/letters/{key}.mp3 convention as single letters (see
+  // letterAudioFile), so the Sound Explorer's tile-building loop handles
+  // them automatically; it just routes multi-character keys to a separate
+  // "Two letters, one sound" grid instead of the A-Z grid.
+  sh: "shh", ch: "chip", th: "thin",
 };
 
 // Words with a real recorded clip at audio/words/{word}.mp3 (generated from
@@ -286,6 +292,36 @@ function buildBlendQuestion() {
   };
 }
 
+// Consonant digraphs: two letters that make one new sound. This is the
+// standard "what comes right after CVC words" step in phonics instruction —
+// starting with sh/ch/th since those are the three that already had a
+// recorded example word (ship/chip/thin) reused elsewhere in the app, so
+// this batch needed only one new audio clip (the "sh" tile sound itself).
+const DIGRAPH_WORDS = [
+  { word: "ship", sound: "sh" },
+  { word: "sheep", sound: "sh" },
+  { word: "chip", sound: "ch" },
+  { word: "cheap", sound: "ch" },
+  { word: "thin", sound: "th" },
+  { word: "think", sound: "th" },
+  { word: "three", sound: "th" },
+];
+const ALL_DIGRAPHS = ["sh", "ch", "th"];
+
+function buildDigraphQuestion() {
+  const item = DIGRAPH_WORDS[Math.floor(Math.random() * DIGRAPH_WORDS.length)];
+  const distractors = ALL_DIGRAPHS.filter((d) => d !== item.sound);
+  const choices = shuffle([
+    { label: item.sound, correct: true },
+    ...distractors.map((d) => ({ label: d, correct: false })),
+  ]);
+  return {
+    prompt: "What sound does this word start with?",
+    playText: item.word,
+    choices,
+  };
+}
+
 function buildSegmentingQuestion() {
   const item = SEGMENTING_WORDS[Math.floor(Math.random() * SEGMENTING_WORDS.length)];
   const distractorCounts = pickN([1, 2, 3, 4, 5].filter((n) => n !== item.count), 2);
@@ -305,6 +341,7 @@ const BUILDERS = {
   minimalpairs: buildMinimalPairQuestion,
   blending: buildBlendQuestion,
   segmenting: buildSegmentingQuestion,
+  digraphs: buildDigraphQuestion,
 };
 
 const ACTIVITY_TITLES = {
@@ -312,6 +349,7 @@ const ACTIVITY_TITLES = {
   minimalpairs: "Sound Pairs",
   blending: "Blend It",
   segmenting: "Count Sounds",
+  digraphs: "Digraph Sounds",
 };
 
 /* ---------- App state ---------- */
@@ -491,6 +529,7 @@ const wordInput = document.getElementById("wordInput");
 const hearWordBtn = document.getElementById("hearWordBtn");
 const wordLettersEl = document.getElementById("wordLetters");
 const letterGridEl = document.getElementById("letterGrid");
+const digraphGridEl = document.getElementById("digraphGrid");
 
 exploreCta.addEventListener("click", () => {
   showScreen("explore");
@@ -519,14 +558,15 @@ function makeSoundButton(letter, variant, extraClass) {
 }
 
 Object.keys(LETTER_SOUNDS).forEach((letter) => {
+  const targetGrid = letter.length > 1 ? digraphGridEl : letterGridEl;
   if (VOWELS.has(letter)) {
     const wrap = document.createElement("div");
     wrap.className = "letter-tile vowel-split";
     wrap.appendChild(makeSoundButton(letter, "short", "vowel-half vowel-half-short"));
     wrap.appendChild(makeSoundButton(letter, "long", "vowel-half vowel-half-long"));
-    letterGridEl.appendChild(wrap);
+    targetGrid.appendChild(wrap);
   } else {
-    letterGridEl.appendChild(makeSoundButton(letter, undefined, "letter-tile"));
+    targetGrid.appendChild(makeSoundButton(letter, undefined, "letter-tile"));
   }
 });
 
