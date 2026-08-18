@@ -147,6 +147,7 @@ body {
 .node-pos-2 { align-self: flex-start; margin-left: 12%; }
 .node-pos-3 { align-self: center; }
 .node-pos-4 { align-self: flex-end; margin-right: 12%; }
+.node-pos-5 { align-self: center; }
 
 .path-node {
   width: 84px;
@@ -173,6 +174,8 @@ body {
 .node-purple:active { box-shadow: 0 2px 0 var(--purple-dark); }
 .node-green { background: var(--primary); box-shadow: 0 8px 0 var(--primary-dark); }
 .node-green:active { box-shadow: 0 2px 0 var(--primary-dark); }
+.node-red { background: var(--red); box-shadow: 0 8px 0 var(--red-dark); }
+.node-red:active { box-shadow: 0 2px 0 var(--red-dark); }
 
 .path-label {
   font-weight: 800;

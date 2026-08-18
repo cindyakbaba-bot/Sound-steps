@@ -58,6 +58,43 @@ const BLEND_WORDS = [
   { word: "cup", distractors: ["cat", "leg"] },
 ];
 
+// Phoneme segmentation: hear a whole word, count how many separate sounds
+// it's made of. This is the mirror skill to Blend It (sounds -> word here
+// goes word -> sound count) and was the single clearest phonemic-awareness
+// gap found when researching the app's coverage — blending existed but
+// segmenting didn't. Every word here already has recorded audio in
+// WORD_AUDIO, so this needed no new audio generation. Digraphs (sh, ch, th)
+// count as one sound, which is why e.g. "fish" and "think" are 3 and 4
+// sounds respectively, not counted letter-by-letter.
+const SEGMENTING_WORDS = [
+  { word: "zoo", count: 2 },
+  { word: "bee", count: 2 },
+  { word: "see", count: 2 },
+  { word: "cat", count: 3 },
+  { word: "sun", count: 3 },
+  { word: "dog", count: 3 },
+  { word: "map", count: 3 },
+  { word: "bed", count: 3 },
+  { word: "pig", count: 3 },
+  { word: "red", count: 3 },
+  { word: "hot", count: 3 },
+  { word: "leg", count: 3 },
+  { word: "net", count: 3 },
+  { word: "top", count: 3 },
+  { word: "van", count: 3 },
+  { word: "win", count: 3 },
+  { word: "gum", count: 3 },
+  { word: "jam", count: 3 },
+  { word: "fish", count: 3 },
+  { word: "ship", count: 3 },
+  { word: "chip", count: 3 },
+  { word: "thin", count: 3 },
+  { word: "stop", count: 4 },
+  { word: "sink", count: 4 },
+  { word: "think", count: 4 },
+  { word: "frog", count: 4 },
+];
+
 const QUESTIONS_PER_SESSION = 8;
 
 // Approximate phonetic sound for each letter, for the Sound Explorer.
@@ -249,16 +286,32 @@ function buildBlendQuestion() {
   };
 }
 
+function buildSegmentingQuestion() {
+  const item = SEGMENTING_WORDS[Math.floor(Math.random() * SEGMENTING_WORDS.length)];
+  const distractorCounts = pickN([1, 2, 3, 4, 5].filter((n) => n !== item.count), 2);
+  const choices = shuffle([
+    { label: String(item.count), correct: true },
+    ...distractorCounts.map((n) => ({ label: String(n), correct: false })),
+  ]);
+  return {
+    prompt: "How many sounds do you hear?",
+    playText: item.word,
+    choices,
+  };
+}
+
 const BUILDERS = {
   isolation: buildIsolationQuestion,
   minimalpairs: buildMinimalPairQuestion,
   blending: buildBlendQuestion,
+  segmenting: buildSegmentingQuestion,
 };
 
 const ACTIVITY_TITLES = {
   isolation: "First Sound",
   minimalpairs: "Sound Pairs",
   blending: "Blend It",
+  segmenting: "Count Sounds",
 };
 
 /* ---------- App state ---------- */
