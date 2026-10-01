@@ -23,6 +23,15 @@ const ISOLATION_WORDS = [
 ];
 const ALL_LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
 
+// Letters that make the same first sound — "cat" starts with the same /k/ as
+// "kite", so c, k and q must never be offered against each other as if only
+// one were right.
+const SAME_SOUND = { c: "ckq", k: "ckq", q: "ckq" };
+
+function soundsAlike(a, b) {
+  return a === b || (SAME_SOUND[a] || "").includes(b);
+}
+
 // Minimal pairs — common ESL confusions
 const MINIMAL_PAIRS = [
   ["ship", "sheep"], ["bit", "beat"], ["live", "leave"], ["sit", "seat"],
@@ -156,7 +165,7 @@ const LETTER_SOUNDS = {
 };
 
 // Words with a real recorded clip at audio/words/{word}.mp3 (generated from
-// a local neural TTS voice — see audio/README.md). Anything not in this set
+// a local neural TTS voice). Anything not in this set
 // falls back to the browser's built-in speech synthesis, which is why the
 // Sound Explorer still works for arbitrary typed words.
 const WORD_AUDIO = new Set([
@@ -178,22 +187,46 @@ const WORD_AUDIO = new Set([
 /* ---------- Speech ---------- */
 
 // A single shared "now playing" clip so overlapping taps interrupt cleanly,
-// the same way speechSynthesis.cancel() interrupts a queued utterance.
-let activeClip = null;
+// the same way speechSynthesis.cancel() interrupts a queued utterance. A
+// paused <audio> never fires "ended", so interrupting must settle the old
+// clip's promise itself — otherwise whatever awaited it (a disabled button,
+// a "playing" highlight) stays stuck forever.
+let stopActiveClip = null;
+
+// Bumped whenever new playback starts or a screen is left, so multi-step
+// sequences (spelling a word, playing a song) can tell they were superseded
+// and stop instead of talking over whatever came next.
+let playbackGen = 0;
+
+function stopAudio() {
+  playbackGen += 1;
+  if (stopActiveClip) stopActiveClip();
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+
+function startPlayback() {
+  stopAudio();
+  return playbackGen;
+}
 
 function playClip(url, { rate = 1, pause = 0 } = {}) {
   return new Promise((resolve, reject) => {
-    if (activeClip) activeClip.pause();
+    if (stopActiveClip) stopActiveClip();
     const audio = new Audio(url);
-    activeClip = audio;
     audio.playbackRate = rate;
-    const finish = (ok) => {
-      if (activeClip === audio) activeClip = null;
-      setTimeout(ok ? resolve : reject, pause);
+    let settled = false;
+    const finish = (ok, delay) => {
+      if (settled) return;
+      settled = true;
+      if (stopActiveClip === interrupt) stopActiveClip = null;
+      setTimeout(ok ? resolve : reject, delay);
     };
-    audio.onended = () => finish(true);
-    audio.onerror = () => finish(false);
-    audio.play().catch(() => finish(false));
+    // Interrupted resolves (not rejects) so callers don't fall back to TTS.
+    const interrupt = () => { audio.pause(); finish(true, 0); };
+    stopActiveClip = interrupt;
+    audio.onended = () => finish(true, pause);
+    audio.onerror = () => finish(false, 0);
+    audio.play().catch(() => finish(false, 0));
   });
 }
 
@@ -278,9 +311,16 @@ function pickN(arr, n) {
 /* ---------- Question builders ---------- */
 // Each builder returns { prompt, playText | playSequence, choices: [{label, correct}] }
 
-function buildIsolationQuestion() {
-  const item = ISOLATION_WORDS[Math.floor(Math.random() * ISOLATION_WORDS.length)];
-  const distractors = pickN(ALL_LETTERS.filter(l => l !== item.sound), 2);
+// Deal n items from pool for one session, using every item once before any
+// repeats (the digraph pool is smaller than a session, so some must repeat).
+function dealItems(pool, n) {
+  let items = [];
+  while (items.length < n) items = items.concat(shuffle(pool));
+  return items.slice(0, n);
+}
+
+function buildIsolationQuestion(item) {
+  const distractors = pickN(ALL_LETTERS.filter(l => !soundsAlike(l, item.sound)), 2);
   const choices = shuffle([
     { label: item.sound, correct: true },
     ...distractors.map(l => ({ label: l, correct: false })),
@@ -292,8 +332,7 @@ function buildIsolationQuestion() {
   };
 }
 
-function buildMinimalPairQuestion() {
-  const [a, b] = MINIMAL_PAIRS[Math.floor(Math.random() * MINIMAL_PAIRS.length)];
+function buildMinimalPairQuestion([a, b]) {
   const answer = Math.random() < 0.5 ? a : b;
   const choices = shuffle([
     { label: a, correct: a === answer },
@@ -306,8 +345,7 @@ function buildMinimalPairQuestion() {
   };
 }
 
-function buildBlendQuestion() {
-  const item = BLEND_WORDS[Math.floor(Math.random() * BLEND_WORDS.length)];
+function buildBlendQuestion(item) {
   const choices = shuffle([
     { label: item.word, correct: true },
     ...item.distractors.map(d => ({ label: d, correct: false })),
@@ -335,8 +373,7 @@ const DIGRAPH_WORDS = [
 ];
 const ALL_DIGRAPHS = ["sh", "ch", "th"];
 
-function buildDigraphQuestion() {
-  const item = DIGRAPH_WORDS[Math.floor(Math.random() * DIGRAPH_WORDS.length)];
+function buildDigraphQuestion(item) {
   const distractors = ALL_DIGRAPHS.filter((d) => d !== item.sound);
   const choices = shuffle([
     { label: item.sound, correct: true },
@@ -349,8 +386,7 @@ function buildDigraphQuestion() {
   };
 }
 
-function buildLongVowelQuestion() {
-  const item = CVCE_WORDS[Math.floor(Math.random() * CVCE_WORDS.length)];
+function buildLongVowelQuestion(item) {
   const distractors = pickN(["a", "e", "i", "o", "u"].filter((v) => v !== item.vowel), 2);
   const choices = shuffle([
     { label: item.vowel, correct: true },
@@ -363,8 +399,7 @@ function buildLongVowelQuestion() {
   };
 }
 
-function buildSegmentingQuestion() {
-  const item = SEGMENTING_WORDS[Math.floor(Math.random() * SEGMENTING_WORDS.length)];
+function buildSegmentingQuestion(item) {
   const distractorCounts = pickN([1, 2, 3, 4, 5].filter((n) => n !== item.count), 2);
   const choices = shuffle([
     { label: String(item.count), correct: true },
@@ -377,13 +412,13 @@ function buildSegmentingQuestion() {
   };
 }
 
-const BUILDERS = {
-  isolation: buildIsolationQuestion,
-  minimalpairs: buildMinimalPairQuestion,
-  blending: buildBlendQuestion,
-  segmenting: buildSegmentingQuestion,
-  digraphs: buildDigraphQuestion,
-  longvowel: buildLongVowelQuestion,
+const ACTIVITIES = {
+  isolation: { pool: ISOLATION_WORDS, build: buildIsolationQuestion },
+  minimalpairs: { pool: MINIMAL_PAIRS, build: buildMinimalPairQuestion },
+  blending: { pool: BLEND_WORDS, build: buildBlendQuestion },
+  segmenting: { pool: SEGMENTING_WORDS, build: buildSegmentingQuestion },
+  digraphs: { pool: DIGRAPH_WORDS, build: buildDigraphQuestion },
+  longvowel: { pool: CVCE_WORDS, build: buildLongVowelQuestion },
 };
 
 const ACTIVITY_TITLES = {
@@ -438,7 +473,8 @@ function showScreen(name) {
 
 function startActivity(activity) {
   state.activity = activity;
-  state.questions = Array.from({ length: QUESTIONS_PER_SESSION }, () => BUILDERS[activity]());
+  const { pool, build } = ACTIVITIES[activity];
+  state.questions = dealItems(pool, QUESTIONS_PER_SESSION).map(build);
   state.index = 0;
   state.correctCount = 0;
   scorePill.hidden = false;
@@ -457,12 +493,14 @@ function currentQuestion() {
 
 async function playCurrentAudio() {
   const q = currentQuestion();
+  const gen = startPlayback();
   playSoundBtn.disabled = true;
   if (q.spellWord) {
     for (const letter of q.spellWord) {
       await speakLetter(letter, { pause: 120 });
+      if (gen !== playbackGen) break;
     }
-    await speakWord(q.spellWord);
+    if (gen === playbackGen) await speakWord(q.spellWord);
   } else {
     await speakWord(q.playText);
   }
@@ -545,7 +583,7 @@ function finishSession() {
 playSoundBtn.addEventListener("click", playCurrentAudio);
 
 backBtn.addEventListener("click", () => {
-  window.speechSynthesis.cancel();
+  stopAudio();
   scorePill.hidden = true;
   showScreen("home");
 });
@@ -580,7 +618,7 @@ exploreCta.addEventListener("click", () => {
 });
 
 exploreBackBtn.addEventListener("click", () => {
-  window.speechSynthesis.cancel();
+  stopAudio();
   showScreen("home");
 });
 
@@ -593,6 +631,7 @@ function makeSoundButton(letter, variant, extraClass) {
   btn.textContent = letter;
   if (variant) btn.setAttribute("aria-label", `${letter}, ${variant} sound`);
   btn.addEventListener("click", async () => {
+    startPlayback();
     btn.classList.add("playing");
     await speakLetter(letter, { variant });
     btn.classList.remove("playing");
@@ -626,15 +665,18 @@ async function playWord(rawWord) {
     return tile;
   });
 
+  const gen = startPlayback();
   hearWordBtn.disabled = true;
-  for (let i = 0; i < word.length; i++) {
+  for (let i = 0; i < word.length && gen === playbackGen; i++) {
     tiles[i].classList.add("active");
     await speakLetter(word[i], { pause: 120 });
     tiles[i].classList.remove("active");
   }
-  tiles.forEach((t) => t.classList.add("active"));
-  await speakWord(word);
-  tiles.forEach((t) => t.classList.remove("active"));
+  if (gen === playbackGen) {
+    tiles.forEach((t) => t.classList.add("active"));
+    await speakWord(word);
+    tiles.forEach((t) => t.classList.remove("active"));
+  }
   hearWordBtn.disabled = false;
 }
 
@@ -684,6 +726,7 @@ function renderWordBank() {
     tile.className = "bank-tile";
     tile.textContent = word;
     tile.addEventListener("click", () => {
+      startPlayback();
       speakWord(word);
       songState.words.push(word);
       renderSongLine();
@@ -716,9 +759,10 @@ function renderSongLine() {
 
 async function playSong() {
   if (songState.words.length === 0) return;
+  const gen = startPlayback();
   playSongBtn.disabled = true;
   const tiles = [...songLineEl.querySelectorAll(".song-tile")];
-  for (let i = 0; i < songState.words.length; i++) {
+  for (let i = 0; i < songState.words.length && gen === playbackGen; i++) {
     tiles[i]?.classList.add("singing");
     await speakWord(songState.words[i], {
       rate: i % 2 === 0 ? 1.15 : 0.88,
@@ -736,7 +780,7 @@ clearSongBtn.addEventListener("click", () => {
   renderSongLine();
 });
 songBackBtn.addEventListener("click", () => {
-  window.speechSynthesis.cancel();
+  stopAudio();
   showScreen("home");
 });
 
