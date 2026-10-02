@@ -1,9 +1,10 @@
-const CACHE_NAME = "sound-steps-v11";
+const CACHE_NAME = "sound-steps-v12";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./style.css",
   "./script.js",
+  "./business-lessons.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -165,8 +166,12 @@ self.addEventListener("fetch", (event) => {
         cached ||
         fetch(event.request)
           .then((response) => {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            // Only cache real files: a 404 (e.g. a lesson video that hasn't
+            // been uploaded yet) must not stick once the file exists.
+            if (response.ok && response.status === 200) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            }
             return response;
           })
           .catch(() => cached)

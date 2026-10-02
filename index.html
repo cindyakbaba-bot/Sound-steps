@@ -41,6 +41,15 @@
         <span class="cta-chevron">›</span>
       </button>
 
+      <button id="businessCta" class="explore-cta business-cta">
+        <span class="cta-icon">💼</span>
+        <span class="cta-text">
+          <span class="cta-title">Business English</span>
+          <span class="cta-desc">Watch a work scene, then practice speaking</span>
+        </span>
+        <span class="cta-chevron">›</span>
+      </button>
+
       <h2 class="section-label">Practice</h2>
       <div class="path">
         <div class="path-node-wrap node-pos-1">
@@ -158,6 +167,96 @@
       </div>
     </section>
 
+    <!-- BUSINESS ENGLISH: LESSON LIST -->
+    <section id="business" class="screen" hidden>
+      <div class="quiz-header">
+        <button id="businessBackBtn" class="link-btn">&larr; Back</button>
+      </div>
+
+      <h1>Business English</h1>
+      <p class="subtitle">Pick a setting. Watch the scene, then answer the trainer out loud.</p>
+
+      <h2 class="explore-heading">Setting</h2>
+      <div id="umbrellaChips" class="family-chips"></div>
+
+      <h2 class="explore-heading">Your industry</h2>
+      <select id="industrySelect" class="industry-select" aria-label="Your industry"></select>
+
+      <div id="lessonList" class="lesson-list"></div>
+    </section>
+
+    <!-- BUSINESS ENGLISH: LESSON -->
+    <section id="lesson" class="screen" hidden>
+      <div class="quiz-header">
+        <button id="lessonBackBtn" class="link-btn">&larr; Lessons</button>
+        <div class="progress-track"><div id="lessonProgress" class="progress-fill"></div></div>
+        <div id="lessonStepCount" class="q-count"></div>
+      </div>
+
+      <!-- Step 1: watch the scene and learn the key phrases -->
+      <div id="lessonWatch">
+        <p id="lessonMeta" class="lesson-meta"></p>
+        <h2 id="lessonTitle" class="lesson-title"></h2>
+
+        <div class="video-frame">
+          <video id="lessonVideo" class="lesson-video" controls playsinline preload="metadata" hidden></video>
+          <div id="videoPlaceholder" class="video-placeholder" hidden>
+            <span class="video-badge">Video coming soon</span>
+            <p id="sceneSetup" class="scene-setup"></p>
+            <div id="sceneLines" class="scene-lines"></div>
+            <button id="playSceneBtn" class="play-btn">
+              <span class="play-icon">▶</span> Play scene
+            </button>
+          </div>
+        </div>
+
+        <h2 class="explore-heading">Key phrases</h2>
+        <p id="phrasesIntro" class="lesson-hint" hidden></p>
+        <div id="phraseList" class="phrase-list"></div>
+        <p id="lessonTip" class="lesson-tip" hidden></p>
+
+        <h2 class="explore-heading">Useful words</h2>
+        <p id="lessonWords" class="lesson-words"></p>
+        <div id="industryWords" class="industry-words" hidden></div>
+
+        <button id="startPracticeBtn" class="next-btn wide-btn">Start practice →</button>
+      </div>
+
+      <!-- Step 2: trainer question, keyword note, record, compare -->
+      <div id="lessonPractice" hidden>
+        <p id="practiceNote" class="lesson-hint" hidden></p>
+        <div class="trainer-bubble">
+          <span class="trainer-avatar">🧑‍🏫</span>
+          <div class="trainer-text">
+            <span class="trainer-label">Trainer</span>
+            <p id="trainerAsk"></p>
+            <button id="replayAskBtn" class="link-btn small-link">🔊 Hear it again</button>
+          </div>
+        </div>
+
+        <div class="keyword-note">
+          <span class="note-label">Your note</span>
+          <div id="keywordChips" class="keyword-chips"></div>
+          <p id="sentenceStarter" class="sentence-starter" hidden></p>
+        </div>
+
+        <div class="record-row">
+          <button id="recordBtn" class="record-btn">🎙️ Record your answer</button>
+          <p id="recordStatus" class="record-status" aria-live="polite"></p>
+        </div>
+
+        <div id="compareBox" class="compare-box" hidden>
+          <button id="playMineBtn" class="secondary-btn">▶ Your answer</button>
+          <button id="playModelBtn" class="secondary-btn">▶ Model answer</button>
+          <p id="modelAnswer" class="model-answer"></p>
+        </div>
+      </div>
+
+      <div id="lessonFooter" class="quiz-footer" hidden>
+        <button id="practiceNextBtn" class="next-btn">Next →</button>
+      </div>
+    </section>
+
     <!-- RESULTS SCREEN -->
     <section id="results" class="screen" hidden>
       <h1 id="resultsHeading">Session complete!</h1>
@@ -170,6 +269,7 @@
 
   </div>
 
+  <script src="business-lessons.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

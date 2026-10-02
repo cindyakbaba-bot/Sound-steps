@@ -24,6 +24,8 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: "Baloo 2", "Segoe UI", system-ui, Roboto, Helvetica, Arial, sans-serif;
@@ -118,6 +120,11 @@ body {
 .cta-title { font-size: 1.15rem; font-weight: 800; }
 .cta-desc { font-size: 0.85rem; opacity: 0.9; font-weight: 500; }
 .cta-chevron { font-size: 1.5rem; font-weight: 800; opacity: 0.85; }
+
+/* Sits right under the Sound Explorer banner, so the gap goes after it instead */
+.explore-cta + .business-cta { margin-top: -22px; }
+.business-cta { background: var(--orange); box-shadow: 0 5px 0 var(--orange-dark); }
+.business-cta:active { box-shadow: 0 1px 0 var(--orange-dark); }
 
 .section-label {
   font-size: 0.85rem;
@@ -675,3 +682,249 @@ body {
   gap: 10px;
   margin-top: 20px;
 }
+
+/* Business English: lesson list */
+.family-chip.chip-soon:not(.active) { color: var(--muted); border-style: dashed; }
+
+.industry-select {
+  width: 100%;
+  border: 2px solid var(--border);
+  border-bottom-width: 4px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--ink);
+  background: white;
+}
+
+.lesson-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.lesson-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: white;
+  border: 2px solid var(--border);
+  border-bottom-width: 4px;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink);
+  transition: transform 0.05s ease;
+}
+
+.lesson-card:active { transform: translateY(2px); }
+.lesson-card-text { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lesson-card-title { font-size: 1.1rem; font-weight: 800; line-height: 1.25; }
+.lesson-card-meta { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.lesson-card-mark { font-size: 1.4rem; font-weight: 800; color: var(--muted); }
+.lesson-done { border-color: var(--primary); }
+.lesson-done .lesson-card-mark { color: var(--primary); }
+
+.level-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: white;
+  background: var(--muted);
+}
+
+.level-starter { background: var(--primary); }
+.level-confident { background: var(--blue); }
+.level-advanced { background: var(--purple-dark); }
+
+/* Business English: lesson */
+.lesson-meta { margin: 8px 0 0; color: var(--muted); font-weight: 700; font-size: 0.9rem; }
+.lesson-title { font-size: 1.6rem; font-weight: 800; margin: 2px 0 16px; line-height: 1.2; }
+
+.video-frame {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #1f2a33;
+}
+
+.lesson-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: black; }
+
+.video-placeholder {
+  padding: 18px;
+  color: white;
+  text-align: center;
+}
+
+.video-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.scene-setup { margin: 12px 0; font-weight: 600; opacity: 0.85; }
+
+.scene-lines { text-align: left; margin-bottom: 18px; }
+
+.scene-line {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  line-height: 1.45;
+  transition: background 0.15s ease;
+}
+
+.scene-line.speaking { background: var(--blue); }
+
+.video-placeholder .play-btn { width: auto; height: auto; padding: 12px 24px; font-size: 1rem; font-weight: 800; margin: 0; gap: 8px; font-family: inherit; }
+.video-placeholder .play-icon { font-size: 1rem; margin: 0; }
+.video-placeholder .play-btn:disabled { opacity: 0.6; }
+
+.lesson-hint { color: var(--muted); font-weight: 600; margin: 0 0 10px; }
+
+.phrase-list { display: grid; gap: 8px; }
+
+.phrase-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  background: white;
+  border: 2px solid var(--border);
+  border-bottom-width: 4px;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink);
+}
+
+.phrase-row:active { background: #e8f7ff; border-color: var(--blue); }
+.phrase-text { font-size: 1.05rem; font-weight: 800; }
+.phrase-use { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+
+.lesson-tip {
+  margin: 14px 0 0;
+  background: #fff8e6;
+  border: 2px solid var(--yellow);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.lesson-words { margin: 0 0 12px; font-weight: 600; line-height: 1.5; }
+
+.industry-words { margin-bottom: 8px; }
+
+.wide-btn { margin-top: 24px; }
+
+.trainer-bubble {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 16px 0;
+}
+
+.trainer-avatar {
+  font-size: 2rem;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #e8f7ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trainer-text {
+  flex: 1;
+  border: 2px solid var(--border);
+  border-radius: 4px var(--radius) var(--radius) var(--radius);
+  padding: 10px 14px;
+}
+
+.trainer-label { font-size: 0.8rem; font-weight: 800; color: var(--blue-dark); text-transform: uppercase; }
+.trainer-text p { margin: 4px 0 6px; font-size: 1.15rem; font-weight: 700; line-height: 1.4; }
+.small-link { font-size: 0.9rem; }
+
+.keyword-note {
+  background: #fff8e6;
+  border: 2px dashed var(--yellow-dark);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.note-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #9c7300;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.keyword-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.keyword-chip {
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 5px 12px;
+  font-weight: 800;
+}
+
+.sentence-starter { margin: 12px 0 0; font-weight: 700; color: var(--primary-darker); }
+
+.record-row { margin-top: 20px; text-align: center; }
+
+.record-btn {
+  width: 100%;
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 15px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--red-dark);
+}
+
+.record-btn:disabled { opacity: 0.5; cursor: default; }
+.record-btn.recording { animation: pulse 1.2s ease-in-out infinite; }
+
+@keyframes pulse {
+  50% { opacity: 0.7; }
+}
+
+.record-status { min-height: 1.4em; margin: 10px 0 0; font-weight: 600; color: var(--muted); }
+
+.compare-box { display: grid; gap: 10px; margin-top: 8px; }
+
+.model-answer {
+  margin: 4px 0 0;
+  background: #d7ffb8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--primary-darker);
+}
+
+#lessonFooter .next-btn { flex: 1; }
+#lessonFooter .next-btn:disabled { opacity: 0.45; cursor: default; }

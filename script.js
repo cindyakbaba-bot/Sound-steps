@@ -413,6 +413,8 @@ const screens = {
   rhymesong: document.getElementById("rhymesong"),
   quiz: document.getElementById("quiz"),
   results: document.getElementById("results"),
+  business: document.getElementById("business"),
+  lesson: document.getElementById("lesson"),
 };
 const scorePill = document.getElementById("scorePill");
 const scoreText = document.getElementById("scoreText");
@@ -539,6 +541,8 @@ function finishSession() {
   resultsSummary.textContent =
     `${ACTIVITY_TITLES[state.activity]}: you got ${state.correctCount} out of ${total} correct (${pct}%).`;
   scorePill.hidden = true;
+  retryBtn.textContent = "Try Again";
+  homeBtn.textContent = "Choose Another Activity";
   showScreen("results");
 }
 
@@ -550,8 +554,14 @@ backBtn.addEventListener("click", () => {
   showScreen("home");
 });
 
-retryBtn.addEventListener("click", () => startActivity(state.activity));
-homeBtn.addEventListener("click", () => showScreen("home"));
+retryBtn.addEventListener("click", () => {
+  if (state.activity === "business") openLesson(business.lesson);
+  else startActivity(state.activity);
+});
+homeBtn.addEventListener("click", () => {
+  if (state.activity === "business") openBusiness();
+  else showScreen("home");
+});
 
 document.querySelectorAll(".path-node").forEach((row) => {
   row.addEventListener("click", () => {
@@ -739,6 +749,419 @@ songBackBtn.addEventListener("click", () => {
   window.speechSynthesis.cancel();
   showScreen("home");
 });
+
+/* ---------- Business English ---------- */
+
+// Per-viewer conveniences only (last filters, finished lessons). Storage can
+// be unavailable (private mode), so every access is guarded.
+function loadPref(key, fallback) {
+  try {
+    const raw = localStorage.getItem(`business.${key}`);
+    return raw === null ? fallback : JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function savePref(key, value) {
+  try { localStorage.setItem(`business.${key}`, JSON.stringify(value)); } catch {}
+}
+
+const business = {
+  umbrella: loadPref("umbrella", BUSINESS_UMBRELLAS[0].id),
+  industry: loadPref("industry", "core"),
+  done: new Set(loadPref("done", [])),
+  lesson: null,
+  questionIndex: 0,
+  recorder: null,
+  recordingUrl: null,
+};
+
+const LEVEL_CLASS = { Starter: "level-starter", Confident: "level-confident", Advanced: "level-advanced" };
+
+const businessCta = document.getElementById("businessCta");
+const businessBackBtn = document.getElementById("businessBackBtn");
+const umbrellaChipsEl = document.getElementById("umbrellaChips");
+const industrySelect = document.getElementById("industrySelect");
+const lessonListEl = document.getElementById("lessonList");
+
+const lessonBackBtn = document.getElementById("lessonBackBtn");
+const lessonProgress = document.getElementById("lessonProgress");
+const lessonStepCount = document.getElementById("lessonStepCount");
+const lessonWatchEl = document.getElementById("lessonWatch");
+const lessonPracticeEl = document.getElementById("lessonPractice");
+const lessonFooter = document.getElementById("lessonFooter");
+const lessonMeta = document.getElementById("lessonMeta");
+const lessonTitle = document.getElementById("lessonTitle");
+const lessonVideo = document.getElementById("lessonVideo");
+const videoPlaceholder = document.getElementById("videoPlaceholder");
+const sceneSetup = document.getElementById("sceneSetup");
+const sceneLinesEl = document.getElementById("sceneLines");
+const playSceneBtn = document.getElementById("playSceneBtn");
+const phrasesIntro = document.getElementById("phrasesIntro");
+const phraseListEl = document.getElementById("phraseList");
+const lessonTip = document.getElementById("lessonTip");
+const lessonWords = document.getElementById("lessonWords");
+const industryWordsEl = document.getElementById("industryWords");
+const startPracticeBtn = document.getElementById("startPracticeBtn");
+const practiceNote = document.getElementById("practiceNote");
+const trainerAsk = document.getElementById("trainerAsk");
+const replayAskBtn = document.getElementById("replayAskBtn");
+const keywordChipsEl = document.getElementById("keywordChips");
+const sentenceStarter = document.getElementById("sentenceStarter");
+const recordBtn = document.getElementById("recordBtn");
+const recordStatus = document.getElementById("recordStatus");
+const compareBox = document.getElementById("compareBox");
+const playMineBtn = document.getElementById("playMineBtn");
+const playModelBtn = document.getElementById("playModelBtn");
+const modelAnswer = document.getElementById("modelAnswer");
+const practiceNextBtn = document.getElementById("practiceNextBtn");
+
+function stopBusinessAudio() {
+  window.speechSynthesis.cancel();
+  if (activeClip) activeClip.pause();
+  lessonVideo.pause();
+  stopRecording();
+}
+
+/* Lesson list */
+
+function openBusiness() {
+  stopBusinessAudio();
+  showScreen("business");
+  renderUmbrellaChips();
+  renderIndustrySelect();
+  renderLessonList();
+}
+
+function renderUmbrellaChips() {
+  umbrellaChipsEl.innerHTML = "";
+  BUSINESS_UMBRELLAS.forEach((umbrella) => {
+    const count = BUSINESS_LESSONS.filter((l) => l.umbrella === umbrella.id).length;
+    const chip = document.createElement("button");
+    chip.className = "family-chip" + (umbrella.id === business.umbrella ? " active" : "");
+    chip.textContent = `${umbrella.emoji} ${umbrella.label}`;
+    if (!count) chip.classList.add("chip-soon");
+    chip.addEventListener("click", () => {
+      business.umbrella = umbrella.id;
+      savePref("umbrella", umbrella.id);
+      renderUmbrellaChips();
+      renderLessonList();
+    });
+    umbrellaChipsEl.appendChild(chip);
+  });
+}
+
+function renderIndustrySelect() {
+  industrySelect.innerHTML = "";
+  BUSINESS_INDUSTRIES.forEach((industry) => {
+    const opt = document.createElement("option");
+    opt.value = industry.id;
+    opt.textContent = industry.label;
+    industrySelect.appendChild(opt);
+  });
+  industrySelect.value = business.industry;
+}
+
+industrySelect.addEventListener("change", () => {
+  business.industry = industrySelect.value;
+  savePref("industry", business.industry);
+  renderLessonList();
+});
+
+// Core lessons (no `industry` tag) show under every industry; tagged
+// industry versions only under their own.
+function lessonsFor(umbrellaId, industryId) {
+  return BUSINESS_LESSONS.filter((l) =>
+    l.umbrella === umbrellaId && (!l.industry || l.industry === industryId)
+  );
+}
+
+function renderLessonList() {
+  lessonListEl.innerHTML = "";
+  const lessons = lessonsFor(business.umbrella, business.industry);
+  if (!lessons.length) {
+    const empty = document.createElement("p");
+    empty.className = "song-empty";
+    empty.textContent = "Lessons for this setting are coming soon.";
+    lessonListEl.appendChild(empty);
+    return;
+  }
+  lessons.forEach((lesson) => {
+    const card = document.createElement("button");
+    card.className = "lesson-card" + (business.done.has(lesson.id) ? " lesson-done" : "");
+    const title = document.createElement("span");
+    title.className = "lesson-card-title";
+    title.textContent = lesson.title;
+    const meta = document.createElement("span");
+    meta.className = "lesson-card-meta";
+    const level = document.createElement("span");
+    level.className = `level-badge ${LEVEL_CLASS[lesson.level] || ""}`;
+    level.textContent = lesson.level;
+    meta.appendChild(level);
+    meta.append(` ${lesson.skills.join(", ")} · ${lesson.questions.length} questions`);
+    const mark = document.createElement("span");
+    mark.className = "lesson-card-mark";
+    mark.textContent = business.done.has(lesson.id) ? "✓" : "›";
+    const text = document.createElement("span");
+    text.className = "lesson-card-text";
+    text.append(title, meta);
+    card.append(text, mark);
+    card.addEventListener("click", () => openLesson(lesson));
+    lessonListEl.appendChild(card);
+  });
+}
+
+/* Lesson: watch step */
+
+// Steps shown in the progress bar: the scene, then one per trainer question.
+function lessonStepTotal() {
+  return business.lesson.questions.length + 1;
+}
+
+function setLessonProgress(step) {
+  const total = lessonStepTotal();
+  lessonProgress.style.width = `${(step / total) * 100}%`;
+  lessonStepCount.textContent = `${Math.min(step + 1, total)} / ${total}`;
+}
+
+function openLesson(lesson) {
+  stopBusinessAudio();
+  business.lesson = lesson;
+  business.questionIndex = 0;
+  showScreen("lesson");
+  lessonWatchEl.hidden = false;
+  lessonPracticeEl.hidden = true;
+  lessonFooter.hidden = true;
+  setLessonProgress(0);
+
+  const umbrella = BUSINESS_UMBRELLAS.find((u) => u.id === lesson.umbrella);
+  lessonMeta.textContent = `${umbrella ? umbrella.label : ""} · ${lesson.level}`;
+  lessonTitle.textContent = lesson.title;
+
+  renderLessonVideo(lesson);
+
+  phrasesIntro.hidden = !lesson.phrasesIntro;
+  phrasesIntro.textContent = lesson.phrasesIntro || "";
+  phraseListEl.innerHTML = "";
+  lesson.phrases.forEach((phrase) => {
+    const row = document.createElement("button");
+    row.className = "phrase-row";
+    const text = document.createElement("span");
+    text.className = "phrase-text";
+    text.textContent = `“${phrase.text}”`;
+    const use = document.createElement("span");
+    use.className = "phrase-use";
+    use.textContent = phrase.use;
+    row.append(text, use);
+    row.addEventListener("click", () => speak(phrase.text.replace(/\[|\]/g, ""), { rate: 0.9 }));
+    phraseListEl.appendChild(row);
+  });
+  lessonTip.hidden = !lesson.tip;
+  lessonTip.textContent = lesson.tip ? `💡 Tip: ${lesson.tip}` : "";
+  lessonWords.textContent = lesson.words;
+
+  const industry = BUSINESS_INDUSTRIES.find((i) => i.id === business.industry);
+  industryWordsEl.innerHTML = "";
+  industryWordsEl.hidden = !(industry && industry.terms.length);
+  if (!industryWordsEl.hidden) {
+    const label = document.createElement("span");
+    label.className = "note-label";
+    label.textContent = `${industry.label} words`;
+    industryWordsEl.appendChild(label);
+    const chips = document.createElement("div");
+    chips.className = "keyword-chips";
+    industry.terms.forEach((term) => {
+      const chip = document.createElement("span");
+      chip.className = "keyword-chip";
+      chip.textContent = term;
+      chips.appendChild(chip);
+    });
+    industryWordsEl.appendChild(chips);
+  }
+  window.scrollTo(0, 0);
+}
+
+// Try the real clip first; if it is missing (no videos are recorded yet)
+// show the scene script instead and let the browser voice read it.
+function renderLessonVideo(lesson) {
+  lessonVideo.hidden = true;
+  videoPlaceholder.hidden = true;
+  sceneSetup.textContent = lesson.scene.setup;
+  sceneLinesEl.innerHTML = "";
+  lesson.scene.lines.forEach((line) => {
+    const p = document.createElement("p");
+    p.className = "scene-line";
+    const who = document.createElement("strong");
+    who.textContent = `${line.speaker}: `;
+    p.append(who, line.text);
+    sceneLinesEl.appendChild(p);
+  });
+
+  lessonVideo.onloadedmetadata = () => {
+    if (business.lesson === lesson) lessonVideo.hidden = false;
+  };
+  lessonVideo.onerror = () => {
+    if (business.lesson === lesson) videoPlaceholder.hidden = false;
+  };
+  lessonVideo.src = lesson.video;
+}
+
+let sceneRun = 0;
+
+async function playScene() {
+  const run = ++sceneRun;
+  const lines = [...sceneLinesEl.querySelectorAll(".scene-line")];
+  playSceneBtn.disabled = true;
+  const speakers = [...new Set(business.lesson.scene.lines.map((l) => l.speaker))];
+  for (let i = 0; i < lines.length && run === sceneRun; i++) {
+    const line = business.lesson.scene.lines[i];
+    lines[i].classList.add("speaking");
+    // Alternate pitch per speaker so a two-person scene is easier to follow.
+    await speak(line.text, { rate: 0.9, pitch: speakers.indexOf(line.speaker) % 2 ? 0.85 : 1.1, pause: 250 });
+    lines[i].classList.remove("speaking");
+  }
+  playSceneBtn.disabled = false;
+}
+
+playSceneBtn.addEventListener("click", playScene);
+
+/* Lesson: practice step */
+
+startPracticeBtn.addEventListener("click", () => {
+  stopBusinessAudio();
+  sceneRun++;
+  lessonWatchEl.hidden = true;
+  lessonPracticeEl.hidden = false;
+  lessonFooter.hidden = false;
+  practiceNote.hidden = !business.lesson.practiceNote;
+  practiceNote.textContent = business.lesson.practiceNote || "";
+  renderPracticeQuestion();
+});
+
+function currentPracticeQuestion() {
+  return business.lesson.questions[business.questionIndex];
+}
+
+function renderPracticeQuestion() {
+  const q = currentPracticeQuestion();
+  setLessonProgress(business.questionIndex + 1);
+  trainerAsk.textContent = q.ask;
+
+  keywordChipsEl.innerHTML = "";
+  q.keywords.forEach((kw) => {
+    const chip = document.createElement("span");
+    chip.className = "keyword-chip";
+    chip.textContent = kw;
+    keywordChipsEl.appendChild(chip);
+  });
+  sentenceStarter.hidden = !q.starter;
+  sentenceStarter.textContent = q.starter ? `Start with: “${q.starter}”` : "";
+
+  clearRecording();
+  recordBtn.disabled = false;
+  recordBtn.textContent = "🎙️ Record your answer";
+  recordBtn.classList.remove("recording");
+  recordStatus.textContent = "";
+  compareBox.hidden = true;
+  playMineBtn.hidden = false;
+  modelAnswer.textContent = `“${q.model}”`;
+  practiceNextBtn.disabled = true;
+  practiceNextBtn.textContent =
+    business.questionIndex + 1 >= business.lesson.questions.length ? "Finish lesson →" : "Next question →";
+
+  speak(q.ask, { rate: 0.9 });
+}
+
+replayAskBtn.addEventListener("click", () => speak(currentPracticeQuestion().ask, { rate: 0.9 }));
+
+function clearRecording() {
+  if (business.recordingUrl) URL.revokeObjectURL(business.recordingUrl);
+  business.recordingUrl = null;
+}
+
+function stopRecording() {
+  const rec = business.recorder;
+  if (rec && rec.state === "recording") rec.stop();
+}
+
+function revealModelAnswer({ haveRecording }) {
+  playMineBtn.hidden = !haveRecording;
+  compareBox.hidden = false;
+  practiceNextBtn.disabled = false;
+}
+
+async function startRecording() {
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    recordStatus.textContent = "Recording isn't supported here. Say your answer out loud, then compare.";
+    recordBtn.disabled = true;
+    revealModelAnswer({ haveRecording: false });
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    recordStatus.textContent = "No microphone access. Say your answer out loud, then compare.";
+    revealModelAnswer({ haveRecording: false });
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const chunks = [];
+  const rec = new MediaRecorder(stream);
+  business.recorder = rec;
+  rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    stream.getTracks().forEach((t) => t.stop());
+    business.recorder = null;
+    recordBtn.classList.remove("recording");
+    recordBtn.textContent = "🎙️ Record again";
+    if (!lessonPracticeEl.hidden && chunks.length) {
+      clearRecording();
+      business.recordingUrl = URL.createObjectURL(new Blob(chunks, { type: rec.mimeType }));
+      recordStatus.textContent = "Now listen to your answer, then the model answer.";
+      revealModelAnswer({ haveRecording: true });
+    }
+  };
+  rec.start();
+  recordBtn.classList.add("recording");
+  recordBtn.textContent = "⏹ Stop recording";
+  recordStatus.textContent = "Recording… speak now.";
+}
+
+recordBtn.addEventListener("click", () => {
+  if (business.recorder) stopRecording();
+  else startRecording();
+});
+
+playMineBtn.addEventListener("click", () => {
+  if (business.recordingUrl) playClip(business.recordingUrl).catch(() => {});
+});
+
+playModelBtn.addEventListener("click", () => speak(currentPracticeQuestion().model, { rate: 0.9 }));
+
+practiceNextBtn.addEventListener("click", () => {
+  stopBusinessAudio();
+  business.questionIndex += 1;
+  if (business.questionIndex < business.lesson.questions.length) {
+    renderPracticeQuestion();
+    return;
+  }
+  business.done.add(business.lesson.id);
+  savePref("done", [...business.done]);
+  clearRecording();
+  resultsHeading.textContent = "Lesson complete! 🌟";
+  resultsSummary.textContent =
+    `${business.lesson.title}: you answered ${business.lesson.questions.length} trainer questions.`;
+  state.activity = "business";
+  retryBtn.textContent = "Practice Again";
+  homeBtn.textContent = "Back to Lessons";
+  showScreen("results");
+});
+
+businessCta.addEventListener("click", openBusiness);
+businessBackBtn.addEventListener("click", () => showScreen("home"));
+lessonBackBtn.addEventListener("click", openBusiness);
 
 /* ---------- PWA install ---------- */
 
