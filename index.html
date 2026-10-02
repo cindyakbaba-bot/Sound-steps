@@ -176,13 +176,24 @@
       <h1>Business English</h1>
       <p class="subtitle">Pick a setting. Watch the scene, then answer the trainer out loud.</p>
 
+      <div class="confidence-card" id="confidenceCard">
+        <div class="confidence-head">
+          <span class="confidence-label">Your confidence</span>
+          <span id="confidenceStage" class="confidence-stage"></span>
+        </div>
+        <div class="confidence-meter" role="meter" aria-label="Your confidence" aria-valuemin="0" aria-valuemax="100" id="confidenceMeter">
+          <div id="confidenceFill" class="confidence-fill"></div>
+        </div>
+        <p id="confidenceNote" class="confidence-note"></p>
+      </div>
+
       <h2 class="explore-heading">Setting</h2>
       <div id="umbrellaChips" class="family-chips"></div>
 
       <h2 class="explore-heading">Your industry</h2>
       <select id="industrySelect" class="industry-select" aria-label="Your industry"></select>
 
-      <div id="lessonList" class="lesson-list"></div>
+      <div id="lessonList" class="journey"></div>
     </section>
 
     <!-- BUSINESS ENGLISH: LESSON -->
@@ -259,8 +270,19 @@
 
     <!-- RESULTS SCREEN -->
     <section id="results" class="screen" hidden>
+      <div id="finishGlow" class="finish-glow" aria-hidden="true" hidden></div>
       <h1 id="resultsHeading">Session complete!</h1>
       <p id="resultsSummary" class="subtitle"></p>
+      <div id="finishConfidence" class="confidence-card finish-confidence" hidden>
+        <div class="confidence-head">
+          <span class="confidence-label">Your confidence</span>
+          <span id="finishStage" class="confidence-stage"></span>
+        </div>
+        <div class="confidence-meter" role="meter" aria-label="Your confidence" aria-valuemin="0" aria-valuemax="100" id="finishMeter">
+          <div id="finishFill" class="confidence-fill"></div>
+        </div>
+        <p id="finishNote" class="confidence-note"></p>
+      </div>
       <div class="results-actions">
         <button id="retryBtn" class="primary-btn">Try Again</button>
         <button id="homeBtn" class="secondary-btn">Choose Another Activity</button>

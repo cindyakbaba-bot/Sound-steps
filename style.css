@@ -699,36 +699,146 @@ body {
   background: white;
 }
 
-.lesson-list {
-  display: grid;
-  gap: 12px;
-  margin-top: 28px;
+/* Journey path: lessons along the winding path, reusing the home path nodes */
+.journey {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  margin-top: 32px;
+  padding-bottom: 24px;
 }
 
-.lesson-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  text-align: left;
+.journey-step { max-width: 70%; }
+
+/* A short dotted trail leading up into each step from the one before */
+.journey-step + .journey-step::before {
+  content: "";
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  width: 6px;
+  height: 28px;
+  margin-left: -3px;
+  background: radial-gradient(circle, var(--border) 3px, transparent 3.5px) center top / 6px 10px repeat-y;
+}
+
+.journey-ahead { background: #e5e5e5; box-shadow: 0 8px 0 #c9c9c9; }
+.journey-ahead:active { box-shadow: 0 2px 0 #c9c9c9; }
+.journey-ahead .path-node-emoji { filter: grayscale(0.6); opacity: 0.8; }
+.journey-done .path-node-emoji { color: white; font-weight: 800; }
+
+.journey-step-next { margin-top: 18px; }
+.journey-step-next::before { display: none; }
+
+.journey-next { outline: 6px solid rgba(255, 150, 0, 0.25); outline-offset: 4px; }
+
+.journey-bubble {
+  position: absolute;
+  top: -30px;
   background: white;
+  color: var(--orange);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 2px 12px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  animation: bob 1.6s ease-in-out infinite;
+  z-index: 1;
+}
+
+@keyframes bob {
+  50% { transform: translateY(-4px); }
+}
+
+.journey-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.journey-title { font-weight: 800; font-size: 0.95rem; line-height: 1.25; color: var(--ink); }
+
+/* Confidence meter: the learner's confidence growing lesson by lesson */
+.confidence-card {
   border: 2px solid var(--border);
   border-bottom-width: 4px;
   border-radius: var(--radius);
   padding: 14px 16px;
-  cursor: pointer;
-  font-family: inherit;
-  color: var(--ink);
-  transition: transform 0.05s ease;
+  margin: 4px 0 20px;
+  text-align: left;
+  background: white;
 }
 
-.lesson-card:active { transform: translateY(2px); }
-.lesson-card-text { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.lesson-card-title { font-size: 1.1rem; font-weight: 800; line-height: 1.25; }
-.lesson-card-meta { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
-.lesson-card-mark { font-size: 1.4rem; font-weight: 800; color: var(--muted); }
-.lesson-done { border-color: var(--primary); }
-.lesson-done .lesson-card-mark { color: var(--primary); }
+.confidence-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.confidence-label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.confidence-stage { font-weight: 800; color: var(--orange-dark); }
+
+.confidence-meter {
+  height: 18px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  width: 3%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--yellow), var(--orange));
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.08);
+  transition: width 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.confidence-fill.no-transition { transition: none; }
+
+.confidence-note { margin: 8px 0 0; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+
+/* Finish moment: a warm glow behind the results */
+#results { position: relative; }
+#results > :not(.finish-glow) { position: relative; }
+.finish-confidence { margin: 20px 0 4px; }
+
+.finish-glow {
+  position: absolute;
+  inset: -40px -20px auto;
+  height: 420px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 35%, rgba(255, 200, 0, 0.45), rgba(255, 150, 0, 0.18) 45%, transparent 70%);
+  opacity: 0.6;
+}
+
+.finish-glow.glowing { animation: glow-in 2.4s ease-out both; }
+
+@keyframes glow-in {
+  0% { opacity: 0; transform: scale(0.85); }
+  35% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0.6; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finish-glow.glowing, .journey-bubble { animation: none; }
+  .confidence-fill { transition: none; }
+}
 
 .level-badge {
   display: inline-block;

@@ -543,6 +543,7 @@ function finishSession() {
   scorePill.hidden = true;
   retryBtn.textContent = "Try Again";
   homeBtn.textContent = "Choose Another Activity";
+  hideFinishMoment();
   showScreen("results");
 }
 
@@ -771,6 +772,9 @@ const business = {
   umbrella: loadPref("umbrella", BUSINESS_UMBRELLAS[0].id),
   industry: loadPref("industry", "core"),
   done: new Set(loadPref("done", [])),
+  // lesson id -> most trainer questions the learner has recorded an answer to
+  recorded: loadPref("recorded", {}),
+  answeredNow: new Set(),
   lesson: null,
   questionIndex: 0,
   recorder: null,
@@ -784,6 +788,16 @@ const businessBackBtn = document.getElementById("businessBackBtn");
 const umbrellaChipsEl = document.getElementById("umbrellaChips");
 const industrySelect = document.getElementById("industrySelect");
 const lessonListEl = document.getElementById("lessonList");
+const confidenceStage = document.getElementById("confidenceStage");
+const confidenceMeter = document.getElementById("confidenceMeter");
+const confidenceFill = document.getElementById("confidenceFill");
+const confidenceNote = document.getElementById("confidenceNote");
+const finishGlow = document.getElementById("finishGlow");
+const finishConfidence = document.getElementById("finishConfidence");
+const finishStage = document.getElementById("finishStage");
+const finishMeter = document.getElementById("finishMeter");
+const finishFill = document.getElementById("finishFill");
+const finishNote = document.getElementById("finishNote");
 
 const lessonBackBtn = document.getElementById("lessonBackBtn");
 const lessonProgress = document.getElementById("lessonProgress");
@@ -832,6 +846,52 @@ function openBusiness() {
   renderUmbrellaChips();
   renderIndustrySelect();
   renderLessonList();
+  renderConfidence();
+}
+
+/* Confidence meter */
+
+// Every lesson available to the learner's industry counts toward the meter.
+// Finishing a lesson earns most of its share; recording an answer to each
+// trainer question (instead of only saying it) earns the rest.
+function confidencePercent() {
+  const lessons = BUSINESS_LESSONS.filter((l) => !l.industry || l.industry === business.industry);
+  if (!lessons.length) return 0;
+  const total = lessons.reduce((sum, l) => {
+    if (!business.done.has(l.id)) return sum;
+    const recorded = Math.min(business.recorded[l.id] || 0, l.questions.length);
+    return sum + 0.6 + 0.4 * (recorded / l.questions.length);
+  }, 0);
+  return Math.round((total / lessons.length) * 100);
+}
+
+const CONFIDENCE_STAGES = [
+  [0, "Just starting"],
+  [1, "Finding your voice"],
+  [20, "Warming up"],
+  [45, "Getting steady"],
+  [70, "Confident"],
+  [95, "Ready for the room"],
+];
+
+function confidenceStageFor(pct) {
+  return CONFIDENCE_STAGES.filter(([min]) => pct >= min).pop()[1];
+}
+
+function setMeter(meterEl, fillEl, stageEl, pct) {
+  fillEl.style.width = `${Math.max(pct, 3)}%`;
+  meterEl.setAttribute("aria-valuenow", pct);
+  meterEl.setAttribute("aria-valuetext", `${pct}%, ${confidenceStageFor(pct)}`);
+  stageEl.textContent = `${confidenceStageFor(pct)} · ${pct}%`;
+}
+
+function renderConfidence() {
+  const pct = confidencePercent();
+  setMeter(confidenceMeter, confidenceFill, confidenceStage, pct);
+  const answers = Object.values(business.recorded).reduce((a, b) => a + b, 0);
+  confidenceNote.textContent = business.done.size
+    ? `${business.done.size} ${business.done.size === 1 ? "lesson" : "lessons"} done · ${answers} ${answers === 1 ? "answer" : "answers"} recorded`
+    : "Finish a lesson to start filling your meter. Recording your answers fills it faster.";
 }
 
 function renderUmbrellaChips() {
@@ -877,6 +937,10 @@ function lessonsFor(umbrellaId, industryId) {
   );
 }
 
+// Lessons sit along a winding path, in Video Category Map order. Nothing is
+// locked; the first unfinished lesson is marked as the next step.
+const JOURNEY_POSITIONS = ["node-pos-1", "node-pos-2", "node-pos-1", "node-pos-4"];
+
 function renderLessonList() {
   lessonListEl.innerHTML = "";
   const lessons = lessonsFor(business.umbrella, business.industry);
@@ -887,28 +951,44 @@ function renderLessonList() {
     lessonListEl.appendChild(empty);
     return;
   }
-  lessons.forEach((lesson) => {
-    const card = document.createElement("button");
-    card.className = "lesson-card" + (business.done.has(lesson.id) ? " lesson-done" : "");
+  const umbrella = BUSINESS_UMBRELLAS.find((u) => u.id === business.umbrella);
+  const next = lessons.find((l) => !business.done.has(l.id));
+  lessons.forEach((lesson, i) => {
+    const done = business.done.has(lesson.id);
+    const step = document.createElement("div");
+    step.className = `path-node-wrap journey-step ${JOURNEY_POSITIONS[i % JOURNEY_POSITIONS.length]}`;
+
+    const node = document.createElement("button");
+    node.className = "path-node journey-node " +
+      (done ? "node-green journey-done" : lesson === next ? "node-orange journey-next" : "journey-ahead");
+    node.setAttribute("aria-label",
+      `${lesson.title}, ${lesson.level}${done ? ", done" : lesson === next ? ", next lesson" : ""}`);
+    const icon = document.createElement("span");
+    icon.className = "path-node-emoji";
+    icon.textContent = done ? "✓" : umbrella.emoji;
+    node.appendChild(icon);
+    node.addEventListener("click", () => openLesson(lesson));
+
+    if (lesson === next) {
+      step.classList.add("journey-step-next");
+      const bubble = document.createElement("span");
+      bubble.className = "journey-bubble";
+      bubble.textContent = business.done.size ? "Next" : "Start";
+      step.appendChild(bubble);
+    }
+
+    const label = document.createElement("span");
+    label.className = "journey-label";
     const title = document.createElement("span");
-    title.className = "lesson-card-title";
+    title.className = "journey-title";
     title.textContent = lesson.title;
-    const meta = document.createElement("span");
-    meta.className = "lesson-card-meta";
     const level = document.createElement("span");
     level.className = `level-badge ${LEVEL_CLASS[lesson.level] || ""}`;
     level.textContent = lesson.level;
-    meta.appendChild(level);
-    meta.append(` ${lesson.skills.join(", ")} · ${lesson.questions.length} questions`);
-    const mark = document.createElement("span");
-    mark.className = "lesson-card-mark";
-    mark.textContent = business.done.has(lesson.id) ? "✓" : "›";
-    const text = document.createElement("span");
-    text.className = "lesson-card-text";
-    text.append(title, meta);
-    card.append(text, mark);
-    card.addEventListener("click", () => openLesson(lesson));
-    lessonListEl.appendChild(card);
+    label.append(title, level);
+
+    step.append(node, label);
+    lessonListEl.appendChild(step);
   });
 }
 
@@ -929,6 +1009,7 @@ function openLesson(lesson) {
   stopBusinessAudio();
   business.lesson = lesson;
   business.questionIndex = 0;
+  business.answeredNow = new Set();
   showScreen("lesson");
   lessonWatchEl.hidden = false;
   lessonPracticeEl.hidden = true;
@@ -1119,6 +1200,7 @@ async function startRecording() {
     if (!lessonPracticeEl.hidden && chunks.length) {
       clearRecording();
       business.recordingUrl = URL.createObjectURL(new Blob(chunks, { type: rec.mimeType }));
+      business.answeredNow.add(business.questionIndex);
       recordStatus.textContent = "Now listen to your answer, then the model answer.";
       revealModelAnswer({ haveRecording: true });
     }
@@ -1147,17 +1229,82 @@ practiceNextBtn.addEventListener("click", () => {
     renderPracticeQuestion();
     return;
   }
-  business.done.add(business.lesson.id);
+  const lesson = business.lesson;
+  const before = confidencePercent();
+  business.done.add(lesson.id);
   savePref("done", [...business.done]);
+  business.recorded[lesson.id] = Math.max(business.recorded[lesson.id] || 0, business.answeredNow.size);
+  savePref("recorded", business.recorded);
+  const after = confidencePercent();
   clearRecording();
   resultsHeading.textContent = "Lesson complete! 🌟";
   resultsSummary.textContent =
-    `${business.lesson.title}: you answered ${business.lesson.questions.length} trainer questions.`;
+    `${lesson.title}: you answered ${lesson.questions.length} trainer questions.`;
   state.activity = "business";
   retryBtn.textContent = "Practice Again";
   homeBtn.textContent = "Back to Lessons";
   showScreen("results");
+  showFinishMoment(before, after);
 });
+
+/* Finish moment: a warm glow, a soft chime and the meter growing */
+
+function showFinishMoment(before, after) {
+  finishGlow.hidden = false;
+  finishGlow.classList.remove("glowing");
+  void finishGlow.offsetWidth; // restart the animation on a repeat finish
+  finishGlow.classList.add("glowing");
+
+  finishConfidence.hidden = false;
+  setMeter(finishMeter, finishFill, finishStage, before);
+  finishFill.classList.add("no-transition");
+  void finishFill.offsetWidth;
+  finishFill.classList.remove("no-transition");
+  setTimeout(() => setMeter(finishMeter, finishFill, finishStage, after), 400);
+
+  const gain = after - before;
+  const missed = business.lesson.questions.length - business.answeredNow.size;
+  finishNote.textContent = gain > 0
+    ? `+${gain}% from this lesson.` + (missed ? " Record every answer next time to grow it even more." : "")
+    : missed
+      ? "Practice again and record each answer to grow your meter."
+      : "You've already got full credit for this one. Keep going along the path!";
+
+  playFinishChime();
+}
+
+function hideFinishMoment() {
+  finishGlow.hidden = true;
+  finishGlow.classList.remove("glowing");
+  finishConfidence.hidden = true;
+}
+
+let chimeContext = null;
+
+// Three soft, rising bell notes, synthesized so no extra file is needed.
+function playFinishChime() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  try {
+    chimeContext = chimeContext || new Ctx();
+    const ctx = chimeContext;
+    if (ctx.state === "suspended") ctx.resume();
+    const start = ctx.currentTime + 0.05;
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const t = start + i * 0.14;
+      const osc = ctx.createOscillator();
+      const vol = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      vol.gain.setValueAtTime(0, t);
+      vol.gain.linearRampToValueAtTime(0.07, t + 0.02);
+      vol.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+      osc.connect(vol).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 1.5);
+    });
+  } catch {}
+}
 
 businessCta.addEventListener("click", openBusiness);
 businessBackBtn.addEventListener("click", () => showScreen("home"));
