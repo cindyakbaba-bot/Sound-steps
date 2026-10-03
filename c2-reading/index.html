@@ -87,10 +87,6 @@ select { max-width: 100%; }
 .rw { display: flex; gap: 10px; margin: -0.6em 0 1.4em; padding: 8px 12px; border-left: 2px solid var(--rewrite); background: var(--rewrite-soft); font-size: 16.5px; line-height: 1.55; cursor: pointer; border-radius: 0 4px 4px 0; }
 .rw b { font-family: var(--f-mono); font-size: 11px; color: var(--rewrite); font-weight: 500; padding-top: 4px; flex: none; }
 .rw.on { outline: 2px solid var(--rewrite); outline-offset: -2px; }
-/* Tap-to-reveal mode hides C2 text until a spot is opened */
-.reveal .chip, .reveal .rw { display: none; }
-.reveal .chip.shown { display: inline; }
-.reveal .rw.shown { display: flex; }
 
 /* Margin column */
 .margin { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -168,10 +164,6 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
       <label class="lbl" for="pick">Passage</label>
       <select id="pick"></select>
       <button class="btn" id="new-btn" type="button">New passage</button>
-      <span class="seg" role="group" aria-label="How C2 upgrades are shown">
-        <button type="button" id="mode-beside" aria-pressed="true">Show beside</button>
-        <button type="button" id="mode-reveal" aria-pressed="false">Tap to reveal</button>
-      </span>
       <div class="legend">
         <span><span class="k-swap">Word swap</span> one word fits the same slot</span>
         <span><span class="k-rewrite">Rewrite</span> the phrase has to change</span>
@@ -373,7 +365,6 @@ let words = [];
 let current = passages[0];
 let spots = [];
 let selected = null;
-let mode = lsGet("c2r.mode", "beside");
 let recall = true;
 const revealed = new Set();
 
@@ -399,17 +390,15 @@ function renderPassage() {
       if (typeof s === "string") return esc(s);
       const on = selected === s ? " on" : "";
       if (s.kind === "swap") {
-        const shown = revealed.has(s._id) ? " shown" : "";
-        return `<button class="spot swap${on}" data-id="${s._id}" aria-label="${esc(s.c1)}: word swap ${s._n}">${esc(s.c1)}</button><span class="chip${shown}">${esc(s.c2)}</span>`;
+        return `<button class="spot swap${on}" data-id="${s._id}" aria-label="${esc(s.c1)}: word swap ${s._n}">${esc(s.c1)}</button><span class="chip">${esc(s.c2)}</span>`;
       }
       return `<button class="spot rewrite${on}" data-id="${s._id}" aria-label="Rewrite ${s._n}">${esc(s.c1)}<sup>${s._n}</sup></button>`;
     }).join("");
     const rws = spots.filter(s => s._pi === pi && s.kind === "rewrite").map(s =>
-      `<div class="rw${selected === s ? " on" : ""}${revealed.has(s._id) ? " shown" : ""}" data-id="${s._id}"><b>${s._n}</b><span>${esc(s.c2)}</span></div>`).join("");
+      `<div class="rw${selected === s ? " on" : ""}" data-id="${s._id}"><b>${s._n}</b><span>${esc(s.c2)}</span></div>`).join("");
     return `<p>${body}</p>${rws}`;
   }).join("");
   const sheet = $("sheet");
-  sheet.className = "sheet" + (mode === "reveal" ? " reveal" : "");
   sheet.innerHTML = `
     <div class="meta"><span>${esc(current.origin || "Your passage")}</span><span>${wc} words</span><span>C1 text</span></div>
     <h2 class="ptitle">${esc(current.title)}</h2>
@@ -432,7 +421,7 @@ function renderDetail() {
   const s = selected;
   if (!s) {
     d.className = "panel detail";
-    d.innerHTML = `<h3>Upgrade</h3><p class="empty">Tap an underlined word or phrase. A <span class="k-swap">Word swap</span> means one C2 word fits the same slot. A <span class="k-rewrite">Rewrite</span> means the C2 version only works if the phrase around it changes too.</p>`;
+    d.innerHTML = `<h3>Upgrade</h3><p class="empty">Tap an underlined word or phrase.</p>`;
     return;
   }
   const saved = isSaved(s);
@@ -445,7 +434,6 @@ function renderDetail() {
     ${head}
     <dl>
       <div><dt>Meaning</dt><dd>${esc(s.meaning || "")}</dd></div>
-      <div><dt>${s.kind === "swap" ? "Why it swaps cleanly" : "Why not a one-word swap"}</dt><dd>${esc(s.note || "")}</dd></div>
       ${s.example ? `<div><dt>Another example</dt><dd class="ex">${esc(s.example)}</dd></div>` : ""}
     </dl>
     <div class="acts">
@@ -460,7 +448,6 @@ function renderDetail() {
 
 function select(s) {
   selected = s;
-  if (s) revealed.add(s._id);
   renderPassage(); renderDetail();
 }
 
@@ -526,14 +513,6 @@ $("pick").onchange = () => {
   selected = null; revealed.clear(); lsSet("c2r.current", current.id);
   renderPassage(); renderDetail();
 };
-function setMode(m) {
-  mode = m; lsSet("c2r.mode", m);
-  $("mode-beside").setAttribute("aria-pressed", m === "beside");
-  $("mode-reveal").setAttribute("aria-pressed", m === "reveal");
-  renderPassage();
-}
-$("mode-beside").onclick = () => setMode("beside");
-$("mode-reveal").onclick = () => { revealed.clear(); setMode("reveal"); };
 function setRecall(on) {
   recall = on; revealed.clear();
   $("recall-on").setAttribute("aria-pressed", on); $("recall-off").setAttribute("aria-pressed", !on);
@@ -575,10 +554,10 @@ ${task}
    - "swap": ONLY when one C2 word (or a fixed compound) can replace the marked C1 word(s) in exactly this sentence with nothing else changing: same part of speech, same grammar pattern (transitivity, prepositions, complements), same meaning in this context, and natural collocation with the surrounding words. c1 = the exact C1 word(s) from the passage; c2 = the replacement, inflected to fit.
    - "rewrite": whenever a one-for-one swap would be wrong or unnatural: different shade of meaning, different grammar, different word partners, or a fixed expression. c1 = the exact span from the passage (a phrase, clause or full sentence); c2 = a natural C2 rewrite of that same span that could replace it in the sentence; focus = the C2 word or expression the rewrite teaches.
    When in doubt, choose "rewrite". Never force a C2 word into a slot where it does not belong.
-4. For every spot also give: meaning (a learner's-dictionary definition of the C2 item, max 20 words), note (1-2 sentences on why it is a clean swap, or exactly why it needs a rewrite: grammar, collocation, register or nuance), example (one new sentence using the C2 item in a different context).
+4. For every spot also give: meaning (a learner's-dictionary definition of the C2 item, max 20 words), example (one new sentence using the C2 item in a different context).
 
 Reply with only JSON in this shape:
-{"title":"Short title","paragraphs":[{"segments":["Plain text before ",{"kind":"swap","c1":"laziness","c2":"indolence","focus":"indolence","meaning":"...","note":"...","example":"..."},", plain text after."]}]}
+{"title":"Short title","paragraphs":[{"segments":["Plain text before ",{"kind":"swap","c1":"laziness","c2":"indolence","focus":"indolence","meaning":"...","example":"..."},", plain text after."]}]}
 
 Segment rules: each paragraph's segments are plain strings and spot objects in reading order. Joining the plain strings and each spot's c1, in order, must reproduce the paragraph exactly, so put spaces and punctuation in the plain strings. Use 3 to 5 paragraphs. Spots must not overlap.`;
 }
@@ -639,7 +618,6 @@ function fromRow(r) {
 }
 
 /* ---------- Boot ---------- */
-setMode(mode);
 renderPicker(); renderPassage(); renderDetail(); renderSaved();
 (async () => {
   await store.init();
