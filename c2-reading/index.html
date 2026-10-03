@@ -105,13 +105,6 @@ select { max-width: 100%; }
 .detail .acts { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
 .detail .close { display: none; }
 .empty { color: var(--muted); font-size: 14px; margin: 0; }
-.ulist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 46vh; overflow: auto; }
-.ulist button { all: unset; cursor: pointer; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 7px 6px; border-radius: 4px; width: 100%; box-sizing: border-box; }
-.ulist button:hover, .ulist button:focus-visible, .ulist button.on { background: var(--paper); }
-.ulist .n { font-family: var(--f-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.ulist .t { font-family: var(--f-read); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ulist .t s { color: var(--muted); }
-.tally { font-size: 13px; color: var(--muted); margin: -4px 0 10px; }
 
 @media (max-width: 900px) {
   .detail.open { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; max-height: 70vh; overflow: auto; border-radius: 12px 12px 0 0; box-shadow: 0 -8px 30px rgb(0 0 0 / 0.18); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
@@ -147,7 +140,7 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
 .status.err { color: var(--rewrite); }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 8px 14px; border-radius: 6px; font-size: 14px; z-index: 40; }
 .note { font-size: 13px; color: var(--muted); }
-@media (prefers-reduced-motion: no-preference) { .spot, .rw, .ulist button { transition: background-color 0.15s; } }
+@media (prefers-reduced-motion: no-preference) { .spot, .rw { transition: background-color 0.15s; } }
 </style>
 
 <div class="wrap">
@@ -173,11 +166,6 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
       <article class="sheet" id="sheet"></article>
       <aside class="margin">
         <div class="panel detail" id="detail"></div>
-        <div class="panel">
-          <h3>Upgrades in this passage</h3>
-          <p class="tally" id="tally"></p>
-          <ol class="ulist" id="ulist"></ol>
-        </div>
       </aside>
     </div>
   </section>
@@ -383,7 +371,6 @@ function renderPicker() {
 }
 function renderPassage() {
   prepare(current);
-  const nSwap = spots.filter(s => s.kind === "swap").length;
   const wc = current.paragraphs.map(plain).join(" ").split(/\s+/).length;
   const html = current.paragraphs.map((para, pi) => {
     const body = para.map(s => {
@@ -404,8 +391,6 @@ function renderPassage() {
     <h2 class="ptitle">${esc(current.title)}</h2>
     <div class="passage">${html}</div>
     ${current.builtin ? "" : `<p class="note" style="margin-top:24px"><button class="btn ghost" type="button" id="del-passage">Delete this passage</button></p>`}`;
-  $("tally").textContent = `${spots.length} upgrades: ${nSwap} word swap${nSwap === 1 ? "" : "s"}, ${spots.length - nSwap} rewrite${spots.length - nSwap === 1 ? "" : "s"}.`;
-  $("ulist").innerHTML = spots.map(s => `<li><button data-id="${s._id}" class="${selected === s ? "on" : ""}"><span class="n">${s._n}</span><span class="t"><s>${esc(s.c1)}</s> ${esc(s.kind === "swap" ? s.c2 : s.focus)}</span><span class="k-${s.kind}">${s.kind === "swap" ? "swap" : "rewrite"}</span></button></li>`).join("");
   const del = $("del-passage");
   if (del) del.onclick = async () => {
     if (del.dataset.armed !== "1") { del.dataset.armed = "1"; del.textContent = "Tap again to delete"; return; }
@@ -503,10 +488,6 @@ $("sheet").addEventListener("click", e => {
   const el = e.target.closest("[data-id]"); if (!el) return;
   const s = spots.find(x => x._id === el.dataset.id);
   select(selected === s ? null : s);
-});
-$("ulist").addEventListener("click", e => {
-  const el = e.target.closest("[data-id]"); if (!el) return;
-  select(spots.find(x => x._id === el.dataset.id));
 });
 $("pick").onchange = () => {
   current = passages.find(p => p.id === $("pick").value) || passages[0];
