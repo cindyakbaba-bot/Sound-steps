@@ -138,6 +138,33 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
 .dlg .row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .status { font-size: 14px; color: var(--muted); min-height: 1.5em; }
 .status.err { color: var(--rewrite); }
+/* Write */
+.write { display: grid; gap: 20px; padding-top: 16px; }
+.write-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .write-grid { grid-template-columns: minmax(0, 1fr); } }
+.wtitle { font-family: var(--f-display); font-weight: 700; font-size: clamp(24px, 3.5vw, 32px); letter-spacing: -0.02em; margin: 0 0 4px; }
+.write .intro { margin: 0 0 16px; color: var(--muted); max-width: 60ch; }
+#draft { width: 100%; min-height: 260px; resize: vertical; font-family: var(--f-read); font-size: 18px; line-height: 1.7; padding: 14px 16px; }
+.wbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-top: 10px; }
+.wbar .note { font-variant-numeric: tabular-nums; }
+.wchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wchip { border: 1px solid var(--rule); background: var(--paper); border-radius: 999px; padding: 4px 11px; cursor: pointer; font-family: var(--f-read); font-size: 15px; }
+.wchip.used { border-color: var(--swap); background: var(--swap-soft); color: var(--swap); }
+.wchip.used::before { content: "\2713\00a0"; }
+.fb { display: grid; gap: 18px; }
+.fb h3 { margin: 0 0 10px; font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; }
+.fb .summary { font-family: var(--f-read); font-size: 18px; margin: 0; max-width: 64ch; }
+.uses { display: grid; gap: 12px; }
+.use { display: grid; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+.use:last-child { border-bottom: 0; padding-bottom: 0; }
+.use .w { font-family: var(--f-display); font-weight: 700; font-size: 18px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.v-good, .v-adjust { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+.v-good { color: var(--swap); background: var(--swap-soft); }
+.v-adjust { color: var(--rewrite); background: var(--rewrite-soft); }
+.use .s { font-family: var(--f-read); font-style: italic; }
+.use .better { font-family: var(--f-read); }
+.use .better b { font-family: var(--f-ui); font-size: 13px; color: var(--muted); font-weight: 600; margin-right: 6px; }
+.fb .passage .spot { cursor: default; }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 8px 14px; border-radius: 6px; font-size: 14px; z-index: 40; }
 .note { font-size: 13px; color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) { .spot, .rw { transition: background-color 0.15s; } }
@@ -149,6 +176,7 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" id="tab-read" aria-selected="true">Read</button>
       <button class="tab" role="tab" id="tab-saved" aria-selected="false">Saved <span class="count" id="saved-count">0</span></button>
+      <button class="tab" role="tab" id="tab-write" aria-selected="false">Write</button>
     </nav>
   </header>
 
@@ -156,7 +184,7 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
     <div class="toolbar">
       <label class="lbl" for="pick">Passage</label>
       <select id="pick"></select>
-      <button class="btn" id="new-btn" type="button">New passage</button>
+      <button class="btn ghost" id="new-btn" type="button">+ Get a new reading passage</button>
       <div class="legend">
         <span><span class="k-swap">Word swap</span> one word fits the same slot</span>
         <span><span class="k-rewrite">Rewrite</span> the phrase has to change</span>
@@ -172,7 +200,7 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
 
   <section id="view-saved" class="saved" hidden>
     <div class="saved-head">
-      <p>Each card shows the C1 wording from the passage. Try to recall the C2 version before you reveal it.</p>
+      <p>Each card shows the C1 wording from the passage. Try to recall the C2 version before you reveal it. <button class="lnk-inline btn ghost" type="button" id="go-write" style="margin-left:6px">Write with these words</button></p>
       <span class="seg" role="group" aria-label="Card mode">
         <button type="button" id="recall-on" aria-pressed="true">Recall</button>
         <button type="button" id="recall-off" aria-pressed="false">Show all</button>
@@ -181,21 +209,44 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
     <div class="cards" id="cards"></div>
     <p class="note" id="store-note"></p>
   </section>
+
+  <section id="view-write" class="write" hidden>
+    <div class="write-grid">
+      <div class="panel">
+        <h2 class="wtitle">Write with your new words</h2>
+        <p class="intro">Write anything you like: an opinion, a short story, a reply to a passage you've read. Using your saved C2 words is up to you. When you're done, Claude checks how you used them and suggests C2 upgrades for your text.</p>
+        <label for="draft" class="note">Your text</label>
+        <textarea id="draft" placeholder="Start writing here…" maxlength="8000"></textarea>
+        <div class="wbar">
+          <span class="note" id="wcount">0 words</span>
+          <button class="btn" type="button" id="fb-go">Get feedback</button>
+        </div>
+        <p class="status" id="fb-status" aria-live="polite"></p>
+      </div>
+      <aside class="panel">
+        <h3>Your saved words</h3>
+        <p class="note" id="wchips-hint" style="margin:0 0 10px">Tap a word to add it to your text. Words you've used get a tick.</p>
+        <div class="wchips" id="wchips"></div>
+      </aside>
+    </div>
+    <div class="fb" id="feedback"></div>
+  </section>
 </div>
 
 <dialog id="gen">
   <form class="dlg" id="gen-form" method="dialog">
-    <h2>New passage</h2>
+    <h2>Get a new reading passage</h2>
+    <p>Claude writes a passage at C1 level and marks the C2 upgrades, ready to read. To practise your own writing, use the Write tab.</p>
     <span class="seg" role="group" aria-label="Source">
-      <button type="button" id="src-topic" aria-pressed="true">Write on a topic</button>
-      <button type="button" id="src-adapt" aria-pressed="false">Adapt my text</button>
+      <button type="button" id="src-topic" aria-pressed="true">Choose a topic</button>
+      <button type="button" id="src-adapt" aria-pressed="false">Paste an article</button>
     </span>
     <div id="pane-topic">
       <label for="topic" class="note">Topic</label>
       <input type="text" id="topic" placeholder="e.g. why cities are planting tiny forests" maxlength="200">
     </div>
     <div id="pane-adapt" hidden>
-      <label for="source" class="note">Paste an article or extract. It will be rewritten at C1 and the C2 upgrades marked.</label>
+      <label for="source" class="note">Paste an article or extract you want to read. It will be adapted to C1 and the C2 upgrades marked.</label>
       <textarea id="source" maxlength="12000" placeholder="Paste text here"></textarea>
     </div>
     <p class="status" id="gen-status" aria-live="polite"></p>
@@ -502,12 +553,127 @@ function setRecall(on) {
 $("recall-on").onclick = () => setRecall(true);
 $("recall-off").onclick = () => setRecall(false);
 function showTab(t) {
-  $("tab-read").setAttribute("aria-selected", t === "read"); $("tab-saved").setAttribute("aria-selected", t === "saved");
-  $("view-read").hidden = t !== "read"; $("view-saved").hidden = t !== "saved";
-  if (t === "saved") { revealed.clear(); renderSaved(); } else renderPassage();
+  ["read", "saved", "write"].forEach(n => { $("tab-" + n).setAttribute("aria-selected", t === n); $("view-" + n).hidden = t !== n; });
+  if (t === "saved") { revealed.clear(); renderSaved(); }
+  else if (t === "write") renderChips();
+  else renderPassage();
 }
 $("tab-read").onclick = () => showTab("read");
 $("tab-saved").onclick = () => showTab("saved");
+$("tab-write").onclick = () => showTab("write");
+$("go-write").onclick = () => showTab("write");
+
+/* ---------- Write ---------- */
+const draft = $("draft");
+draft.value = lsGet("c2r.draft", "");
+const stems = w => w.toLowerCase().split(/[^a-z-]+/).filter(x => x.length >= 4).map(x => x.length > 5 ? x.slice(0, -2) : x);
+const usedIn = (text, w) => { const t = text.toLowerCase(), st = stems(w); return st.length > 0 && st.every(x => t.includes(x)); };
+const practiceWords = () => [...new Set(words.map(w => w.focus || w.c2))];
+function renderChips() {
+  const list = practiceWords();
+  $("wchips-hint").textContent = list.length
+    ? "Tap a word to add it to your text. Words you've used get a tick."
+    : "Words you save while reading appear here. You can still write without them.";
+  $("wchips").innerHTML = list.map(w => `<button type="button" class="wchip${usedIn(draft.value, w) ? " used" : ""}" data-w="${esc(w)}">${esc(w)}</button>`).join("");
+  const n = draft.value.trim() ? draft.value.trim().split(/\s+/).length : 0;
+  $("wcount").textContent = n + (n === 1 ? " word" : " words");
+}
+draft.addEventListener("input", () => { lsSet("c2r.draft", draft.value); renderChips(); });
+$("wchips").addEventListener("click", e => {
+  const c = e.target.closest("[data-w]"); if (!c) return;
+  const w = c.dataset.w, a = draft.selectionStart ?? draft.value.length, b = draft.selectionEnd ?? a;
+  const before = draft.value.slice(0, a), pad = before && !/\s$/.test(before) ? " " : "";
+  draft.value = before + pad + w + " " + draft.value.slice(b);
+  const pos = (before + pad + w + " ").length;
+  draft.focus(); draft.setSelectionRange(pos, pos);
+  lsSet("c2r.draft", draft.value); renderChips();
+});
+
+function feedbackPrompt(text, list) {
+  return `You are an experienced English teacher. Your student is an advanced learner (CEFR C1) building active C2 vocabulary. They wrote the text below.${list.length ? ` They have been learning these C2 words and expressions and may have tried to use some of them (using them was optional): ${list.join("; ")}.` : ""}
+
+Student's text:
+"""
+${text}
+"""
+
+Give feedback as JSON with three parts:
+1. "summary": one or two warm, specific sentences on the writing overall.
+2. "used": for each of the learning words above that actually appears in the text (in any form), an object {"word", "sentence" (the student's sentence where it appears, copied exactly), "verdict" ("natural" or "adjust"), "comment" (one sentence on meaning, grammar, collocation or register), "better" (a corrected version of that sentence, only when verdict is "adjust")}. If none appear, return [].
+3. "paragraphs": the student's text, copied exactly, split into its paragraphs, each as {"segments": [...]}. Mark 3 to 6 spots where a genuinely C2 word or expression would lift the writing. For each spot decide:
+   - "swap" ONLY when one C2 word can replace the marked words in exactly this sentence with nothing else changing (same part of speech, grammar pattern and meaning, natural collocation). c1 = the student's exact words; c2 = the replacement.
+   - "rewrite" whenever a one-for-one swap would be wrong or unnatural. c1 = the student's exact phrase or sentence; c2 = a natural C2 rewrite of that span; focus = the C2 item it teaches.
+   When in doubt, use "rewrite". Each spot also has "meaning" (learner's-dictionary definition of the C2 item, max 20 words) and "example" (one new sentence using it in another context). Do not change anything outside the spots.
+
+Reply with only JSON in this shape:
+{"summary":"...","used":[{"word":"exacerbate","sentence":"...","verdict":"adjust","comment":"...","better":"..."}],"paragraphs":[{"segments":["Plain text ",{"kind":"swap","c1":"very important","c2":"paramount","focus":"paramount","meaning":"...","example":"..."}," more text."]}]}
+Joining each paragraph's plain strings and each spot's c1, in order, must reproduce the student's paragraph exactly.`;
+}
+
+let lastFeedback = null;
+function segHtml(paragraphs) {
+  return paragraphs.map(para => {
+    const body = para.map(s => typeof s === "string" ? esc(s)
+      : s.kind === "swap" ? `<span class="spot swap">${esc(s.c1)}</span><span class="chip">${esc(s.c2)}</span>`
+      : `<span class="spot rewrite">${esc(s.c1)}</span>`).join("");
+    const rws = para.filter(s => typeof s !== "string" && s.kind === "rewrite").map(s => `<div class="rw"><b>&rarr;</b><span>${esc(s.c2)}</span></div>`).join("");
+    return `<p>${body}</p>${rws}`;
+  }).join("");
+}
+function renderFeedback() {
+  const f = lastFeedback, el = $("feedback");
+  if (!f) { el.innerHTML = ""; return; }
+  const uses = f.used.length ? f.used.map(u => `
+      <div class="use">
+        <div class="w">${esc(u.word)} <span class="${u.verdict === "natural" ? "v-good" : "v-adjust"}">${u.verdict === "natural" ? "Used naturally" : "Needs adjusting"}</span></div>
+        ${u.sentence ? `<div class="s">${esc(u.sentence)}</div>` : ""}
+        <div>${esc(u.comment)}</div>
+        ${u.better && u.verdict !== "natural" ? `<div class="better"><b>Try</b>${esc(u.better)}</div>` : ""}
+      </div>`).join("") : `<p class="empty">You didn't use any of your saved words this time. That's fine. The upgrades below give you new ones to try.</p>`;
+  el.innerHTML = `
+    <div class="panel"><h3>Feedback</h3><p class="summary">${esc(f.summary)}</p></div>
+    <div class="panel"><h3>Your C2 words</h3><div class="uses">${uses}</div></div>
+    <div class="panel"><h3>C2 upgrades for your text</h3>
+      <div class="passage">${segHtml(f.paragraphs)}</div>
+      <div class="wbar"><span class="note">Open it in the reader to tap each upgrade and save the words you like.</span><button class="btn" type="button" id="fb-open">Open in reader</button></div>
+    </div>`;
+  $("fb-open").onclick = async () => {
+    const d = new Date();
+    const row = { id: "p-" + Date.now().toString(36), type: "passage", title: "My writing, " + d.toLocaleDateString(undefined, { day: "numeric", month: "short" }), origin: "Your writing", paragraphs: f.paragraphs.map(segs => ({ segments: segs })), createdAt: Date.now() };
+    try { await store.put(row); } catch (err) { toast("Opened, but it couldn't be saved."); }
+    const loaded = fromRow(row);
+    passages.push(loaded); current = loaded; selected = null;
+    renderPicker(); showTab("read"); renderDetail(); window.scrollTo({ top: 0 });
+  };
+}
+
+$("fb-go").onclick = async () => {
+  const status = $("fb-status"), text = draft.value.trim();
+  if (text.split(/\s+/).length < 25) { status.className = "status err"; status.textContent = "Write at least a few sentences (25+ words) to get feedback."; return; }
+  const sample = await use("sample");
+  if (!sample) { status.className = "status err"; status.textContent = "Feedback needs Claude, which isn't available in this view. Open the page on claude.ai while signed in."; return; }
+  $("fb-go").disabled = true; status.className = "status"; status.textContent = "Reading your text…";
+  try {
+    const raw = await sample.json(feedbackPrompt(text, practiceWords()), { modelTier: "complex", onText: () => { status.textContent = "Writing feedback…"; } });
+    const p = normalise(raw);
+    const str = v => typeof v === "string" ? v : "";
+    lastFeedback = {
+      summary: str(raw.summary),
+      used: (Array.isArray(raw.used) ? raw.used : []).filter(u => u && typeof u.word === "string")
+        .map(u => ({ word: u.word, sentence: str(u.sentence), verdict: u.verdict === "natural" ? "natural" : "adjust", comment: str(u.comment), better: str(u.better) })),
+      paragraphs: p.paragraphs
+    };
+    status.textContent = "";
+    renderFeedback();
+    $("feedback").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    const code = err && err.code;
+    status.className = "status err";
+    if (code === "not_granted" || code === "sampling_disabled") status.textContent = "This page hasn't been allowed to use Claude. Allow it from the page's Permissions menu, then try again.";
+    else if (code === "rate_limited") status.textContent = "You've hit your usage limit for now. Try again later.";
+    else status.textContent = "Something went wrong getting feedback. Tap Get feedback to try again.";
+  } finally { $("fb-go").disabled = false; }
+};
 
 /* ---------- Generator ---------- */
 let src = "topic", genCtl = null;
@@ -609,6 +775,6 @@ renderPicker(); renderPassage(); renderDetail(); renderSaved();
   const last = lsGet("c2r.current", null);
   const found = passages.find(p => p.id === last);
   if (found && found !== current) { current = found; selected = null; }
-  renderPicker(); renderPassage(); renderDetail(); renderSaved();
+  renderPicker(); renderPassage(); renderDetail(); renderSaved(); renderChips();
 })();
 </script>
