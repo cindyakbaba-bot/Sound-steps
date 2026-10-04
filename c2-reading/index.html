@@ -1,0 +1,780 @@
+<title>C2 Reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: reading desk. C1 passage on the left at book measure; a sticky "margin" column on the right holds the upgrade detail and the list of upgrades. On phones the margin stacks below and the detail opens as a bottom sheet. */
+:root {
+  --paper: #F4F5F1;
+  --sheet: #FFFFFE;
+  --ink: #1C2125;
+  --muted: #5F676C;
+  --rule: #D9DCD6;
+  --accent: #23415E;
+  --swap: #17695F;
+  --swap-soft: #DCEFEA;
+  --rewrite: #7B3A6A;
+  --rewrite-soft: #F2E2EC;
+  --focus: #FFE9A8;
+  --f-read: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-display: "Bricolage Grotesque", "Public Sans", system-ui, sans-serif;
+  --f-ui: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14181B; --sheet: #1B2024; --ink: #E4E7E9; --muted: #98A1A7; --rule: #2E353A;
+    --accent: #9CC0E4; --swap: #6FCDBE; --swap-soft: #183631; --rewrite: #E3A0CF; --rewrite-soft: #3A2234;
+    --focus: #4D4320; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #14181B; --sheet: #1B2024; --ink: #E4E7E9; --muted: #98A1A7; --rule: #2E353A;
+  --accent: #9CC0E4; --swap: #6FCDBE; --swap-soft: #183631; --rewrite: #E3A0CF; --rewrite-soft: #3A2234;
+  --focus: #4D4320; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--paper); color: var(--ink); }
+body { font-family: var(--f-ui); font-size: 15px; line-height: 1.5; }
+button { font: inherit; color: inherit; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 80px; }
+
+/* Top bar */
+.top { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+.brand { display: flex; align-items: baseline; gap: 10px; margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; }
+.brand .lv { font-family: var(--f-mono); font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.brand .lv b { color: var(--swap); font-weight: 500; }
+.brand .lv i { font-style: normal; color: var(--rewrite); }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tab { border: 1px solid transparent; background: none; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-weight: 500; color: var(--muted); }
+.tab[aria-selected="true"] { color: var(--ink); border-color: var(--rule); background: var(--sheet); }
+.tab .count { font-family: var(--f-mono); font-size: 12px; margin-left: 4px; font-variant-numeric: tabular-nums; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Toolbar */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding-block: 14px; }
+.toolbar label.lbl { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+select, input[type="text"], textarea { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; }
+select { max-width: 100%; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--sheet); padding: 7px 12px; cursor: pointer; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--sheet); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-left: auto; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.k-swap, .k-rewrite { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+.k-swap { color: var(--swap); background: var(--swap-soft); }
+.k-rewrite { color: var(--rewrite); background: var(--rewrite-soft); }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--sheet); border-radius: 6px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Reading desk */
+.desk { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+@media (max-width: 900px) { .desk { grid-template-columns: minmax(0, 1fr); } }
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: clamp(20px, 4.5vw, 52px); min-width: 0; }
+.meta { font-family: var(--f-mono); font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+.ptitle { font-family: var(--f-display); font-weight: 700; font-size: clamp(26px, 4vw, 38px); line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 24px; text-wrap: balance; }
+.passage { font-family: var(--f-read); font-size: 19px; line-height: 1.85; max-width: 66ch; }
+.passage > p { margin: 0 0 1.2em; }
+
+.spot { all: unset; cursor: pointer; border-radius: 2px; }
+.spot.swap { border-bottom: 2px solid var(--swap); }
+.spot.rewrite { background-image: linear-gradient(to right, var(--rewrite) 55%, transparent 55%); background-size: 7px 2px; background-repeat: repeat-x; background-position: 0 100%; padding-bottom: 1px; }
+.spot:hover, .spot:focus-visible { background-color: var(--focus); }
+.spot.on { background-color: var(--focus); }
+.spot sup { font-family: var(--f-mono); font-size: 10px; color: var(--rewrite); margin-left: 1px; }
+.chip { font-family: var(--f-ui); font-size: 14px; font-weight: 600; color: var(--swap); background: var(--swap-soft); border-radius: 3px; padding: 1px 6px; margin-left: 4px; white-space: nowrap; }
+.chip::before { content: "\21C4\00a0"; font-weight: 400; opacity: 0.8; }
+.rw { display: flex; gap: 10px; margin: -0.6em 0 1.4em; padding: 8px 12px; border-left: 2px solid var(--rewrite); background: var(--rewrite-soft); font-size: 16.5px; line-height: 1.55; cursor: pointer; border-radius: 0 4px 4px 0; }
+.rw b { font-family: var(--f-mono); font-size: 11px; color: var(--rewrite); font-weight: 500; padding-top: 4px; flex: none; }
+.rw.on { outline: 2px solid var(--rewrite); outline-offset: -2px; }
+
+/* Margin column */
+.margin { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 900px) { .margin { position: static; } }
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 16px; min-width: 0; }
+.panel h3 { margin: 0 0 10px; font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; }
+.detail .pair { display: grid; gap: 8px; margin: 10px 0 12px; }
+.detail .from { font-family: var(--f-read); font-size: 16px; color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 50%, transparent); }
+.detail .to { font-family: var(--f-read); font-size: 19px; line-height: 1.4; }
+.detail.swap .to { color: var(--swap); font-weight: 600; font-size: 24px; }
+.detail .focusw { font-family: var(--f-display); font-weight: 700; font-size: 20px; color: var(--rewrite); }
+.detail dl { margin: 0; display: grid; gap: 10px; }
+.detail dt { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.detail dd { margin: 2px 0 0; }
+.detail dd.ex { font-family: var(--f-read); font-style: italic; font-size: 16px; }
+.detail .acts { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.detail .close { display: none; }
+.empty { color: var(--muted); font-size: 14px; margin: 0; }
+
+@media (max-width: 900px) {
+  .detail.open { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; max-height: 70vh; overflow: auto; border-radius: 12px 12px 0 0; box-shadow: 0 -8px 30px rgb(0 0 0 / 0.18); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .detail .close { display: inline-block; }
+  .detail:not(.open) { display: none; }
+}
+
+/* Saved words */
+.saved { display: grid; gap: 14px; padding-top: 6px; }
+.saved-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.saved-head p { margin: 0; color: var(--muted); max-width: 60ch; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card .ctx { font-family: var(--f-read); font-size: 16px; }
+.card .ans { font-family: var(--f-read); font-size: 18px; font-weight: 600; }
+.card.swap .ans { color: var(--swap); }
+.card.rewrite .ans { color: var(--rewrite); font-weight: 400; }
+.card .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.card small { color: var(--muted); }
+.card .lnk { all: unset; cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; }
+.card .lnk:focus-visible { outline: 2px solid var(--accent); }
+
+/* Generator */
+dialog { border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink); padding: 0; width: min(600px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgb(0 0 0 / 0.35); }
+.dlg { padding: 22px; display: grid; gap: 14px; }
+.dlg h2 { margin: 0; font-family: var(--f-display); font-size: 22px; letter-spacing: -0.01em; }
+.dlg p { margin: 0; color: var(--muted); }
+.dlg textarea { width: 100%; min-height: 160px; resize: vertical; }
+.dlg input[type="text"] { width: 100%; }
+.dlg .row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.status { font-size: 14px; color: var(--muted); min-height: 1.5em; }
+.status.err { color: var(--rewrite); }
+/* Write */
+.write { display: grid; gap: 20px; padding-top: 16px; }
+.write-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .write-grid { grid-template-columns: minmax(0, 1fr); } }
+.wtitle { font-family: var(--f-display); font-weight: 700; font-size: clamp(24px, 3.5vw, 32px); letter-spacing: -0.02em; margin: 0 0 4px; }
+.write .intro { margin: 0 0 16px; color: var(--muted); max-width: 60ch; }
+#draft { width: 100%; min-height: 260px; resize: vertical; font-family: var(--f-read); font-size: 18px; line-height: 1.7; padding: 14px 16px; }
+.wbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-top: 10px; }
+.wbar .note { font-variant-numeric: tabular-nums; }
+.wchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wchip { border: 1px solid var(--rule); background: var(--paper); border-radius: 999px; padding: 4px 11px; cursor: pointer; font-family: var(--f-read); font-size: 15px; }
+.wchip.used { border-color: var(--swap); background: var(--swap-soft); color: var(--swap); }
+.wchip.used::before { content: "\2713\00a0"; }
+.fb { display: grid; gap: 18px; }
+.fb h3 { margin: 0 0 10px; font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; }
+.fb .summary { font-family: var(--f-read); font-size: 18px; margin: 0; max-width: 64ch; }
+.uses { display: grid; gap: 12px; }
+.use { display: grid; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+.use:last-child { border-bottom: 0; padding-bottom: 0; }
+.use .w { font-family: var(--f-display); font-weight: 700; font-size: 18px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.v-good, .v-adjust { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+.v-good { color: var(--swap); background: var(--swap-soft); }
+.v-adjust { color: var(--rewrite); background: var(--rewrite-soft); }
+.use .s { font-family: var(--f-read); font-style: italic; }
+.use .better { font-family: var(--f-read); }
+.use .better b { font-family: var(--f-ui); font-size: 13px; color: var(--muted); font-weight: 600; margin-right: 6px; }
+.fb .passage .spot { cursor: default; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 8px 14px; border-radius: 6px; font-size: 14px; z-index: 40; }
+.note { font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .spot, .rw { transition: background-color 0.15s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1 class="brand">C2 Reading <span class="lv">read at <b>C1</b> · learn <i>C2</i></span></h1>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-read" aria-selected="true">Read</button>
+      <button class="tab" role="tab" id="tab-saved" aria-selected="false">Saved <span class="count" id="saved-count">0</span></button>
+      <button class="tab" role="tab" id="tab-write" aria-selected="false">Write</button>
+    </nav>
+  </header>
+
+  <section id="view-read">
+    <div class="toolbar">
+      <label class="lbl" for="pick">Passage</label>
+      <select id="pick"></select>
+      <button class="btn ghost" id="new-btn" type="button">+ Get a new reading passage</button>
+      <div class="legend">
+        <span><span class="k-swap">Word swap</span> one word fits the same slot</span>
+        <span><span class="k-rewrite">Rewrite</span> the phrase has to change</span>
+      </div>
+    </div>
+    <div class="desk">
+      <article class="sheet" id="sheet"></article>
+      <aside class="margin">
+        <div class="panel detail" id="detail"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="view-saved" class="saved" hidden>
+    <div class="saved-head">
+      <p>Each card shows the C1 wording from the passage. Try to recall the C2 version before you reveal it. <button class="lnk-inline btn ghost" type="button" id="go-write" style="margin-left:6px">Write with these words</button></p>
+      <span class="seg" role="group" aria-label="Card mode">
+        <button type="button" id="recall-on" aria-pressed="true">Recall</button>
+        <button type="button" id="recall-off" aria-pressed="false">Show all</button>
+      </span>
+    </div>
+    <div class="cards" id="cards"></div>
+    <p class="note" id="store-note"></p>
+  </section>
+
+  <section id="view-write" class="write" hidden>
+    <div class="write-grid">
+      <div class="panel">
+        <h2 class="wtitle">Write with your new words</h2>
+        <p class="intro">Write anything you like: an opinion, a short story, a reply to a passage you've read. Using your saved C2 words is up to you. When you're done, Claude checks how you used them and suggests C2 upgrades for your text.</p>
+        <label for="draft" class="note">Your text</label>
+        <textarea id="draft" placeholder="Start writing here…" maxlength="8000"></textarea>
+        <div class="wbar">
+          <span class="note" id="wcount">0 words</span>
+          <button class="btn" type="button" id="fb-go">Get feedback</button>
+        </div>
+        <p class="status" id="fb-status" aria-live="polite"></p>
+      </div>
+      <aside class="panel">
+        <h3>Your saved words</h3>
+        <p class="note" id="wchips-hint" style="margin:0 0 10px">Tap a word to add it to your text. Words you've used get a tick.</p>
+        <div class="wchips" id="wchips"></div>
+      </aside>
+    </div>
+    <div class="fb" id="feedback"></div>
+  </section>
+</div>
+
+<dialog id="gen">
+  <form class="dlg" id="gen-form" method="dialog">
+    <h2>Get a new reading passage</h2>
+    <p>Claude writes a passage at C1 level and marks the C2 upgrades, ready to read. To practise your own writing, use the Write tab.</p>
+    <span class="seg" role="group" aria-label="Source">
+      <button type="button" id="src-topic" aria-pressed="true">Choose a topic</button>
+      <button type="button" id="src-adapt" aria-pressed="false">Paste an article</button>
+    </span>
+    <div id="pane-topic">
+      <label for="topic" class="note">Topic</label>
+      <input type="text" id="topic" placeholder="e.g. why cities are planting tiny forests" maxlength="200">
+    </div>
+    <div id="pane-adapt" hidden>
+      <label for="source" class="note">Paste an article or extract you want to read. It will be adapted to C1 and the C2 upgrades marked.</label>
+      <textarea id="source" maxlength="12000" placeholder="Paste text here"></textarea>
+    </div>
+    <p class="status" id="gen-status" aria-live="polite"></p>
+    <div class="row">
+      <button class="btn ghost" type="button" id="gen-cancel">Cancel</button>
+      <button class="btn" type="submit" id="gen-go">Create passage</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+/* ---------- Built-in passages (hand-written) ----------
+   A paragraph is a list of segments: plain strings and upgrade spots.
+   Joining every string and every spot's c1 reproduces the C1 paragraph. */
+const S = (c2, c1, meaning, note, example) => ({ kind: "swap", c1, c2, focus: c2, meaning, note, example });
+const R = (focus, c1, c2, meaning, note, example) => ({ kind: "rewrite", c1, c2, focus, meaning, note, example });
+
+const BUILTIN = [
+  {
+    id: "b-putoff", builtin: true, title: "Why We Put Things Off", origin: "Original · psychology",
+    paragraphs: [
+      ["Most of us know the feeling. A task matters, the deadline is close, and yet we find ourselves tidying the desk or scrolling through our phones. It is tempting to blame this on simple ",
+        S("indolence", "laziness", "unwillingness to work or make an effort; a formal word for laziness.",
+          "A true swap: same noun slot after 'simple', same meaning. It is far more formal than 'laziness', so it suits essays and journalism, not a chat with friends.",
+          "The report blamed the delays not on indolence but on poor planning."),
+        ", but psychologists now argue that the real cause lies elsewhere."],
+      ["According to this view, delaying a task is a way of managing our mood. When a job makes us anxious or bored, putting it off brings instant relief. The trouble is that this relief is ",
+        S("fleeting", "short-lived", "lasting for only a very short time.",
+          "A true swap after 'is'. 'Fleeting' is used above all with feelings, moments and impressions, which is exactly what 'relief' is here.",
+          "She caught a fleeting glimpse of him in the crowd."),
+        ": the task is still waiting, and now there is less time to do it."],
+      ["Worse still, ",
+        R("procrastinate over", "we often put off the very emails we are most worried about", "we tend to procrastinate over the very emails we most dread",
+          "to keep delaying something you should do, usually because it is unpleasant or boring.",
+          "Not a one-word swap for 'put off'. 'Procrastinate' cannot take a direct object (you cannot 'procrastinate the emails'); it needs 'over' or 'on', or stands alone. 'Dread' also replaces 'be most worried about'.",
+          "He procrastinated for weeks before finally booking the appointment."),
+        ". Each day of delay ",
+        R("exacerbate", "makes the anxiety worse", "exacerbates the anxiety",
+          "to make a problem, a bad situation or a negative feeling worse.",
+          "'Worse' is an adjective inside the pattern 'make something worse', so a single verb has to replace the whole pattern. 'Exacerbate' goes with problems, symptoms, tensions and anxiety, never with good things.",
+          "Cutting the budget would only exacerbate the shortage of teachers."),
+        ", which makes the task feel even harder to start."],
+      ["The good news is that the habit can be broken. Researchers ",
+        R("self-compassion", "suggest being kinder to yourself after a missed deadline", "recommend practising self-compassion after a missed deadline",
+          "kindness and understanding towards yourself, especially when you fail or make a mistake.",
+          "'Be kind' is an adjective pattern; the C2 term is a noun, and it collocates with 'practise' or 'show', so the verb around it has to change too.",
+          "Therapists often encourage clients who are perfectionists to practise self-compassion."),
+        ", since self-criticism ",
+        R("breed", "tends to lead to more delay", "tends to breed further delay",
+          "to cause a bad feeling or situation to develop, often gradually.",
+          "'Lead to' can introduce good or bad results; 'breed' works only for negative states (it breeds resentment, complacency, contempt). The pairing 'further delay' is also more natural than 'more delay' in formal writing.",
+          "Secrecy within the team only breeds mistrust."),
+        ". It may sound ",
+        S("counter-intuitive", "surprising", "seeming to go against what you would naturally expect.",
+          "Works here because the claim (forgive yourself to work harder) goes against common sense. It is not a general synonym: a surprise party is not counter-intuitive.",
+          "It is counter-intuitive, but slowing down can make a team more productive."),
+        ", but forgiving yourself makes you more likely to start next time."]
+    ]
+  },
+  {
+    id: "b-nighttrain", builtin: true, title: "The Return of the Night Train", origin: "Original · travel and transport",
+    paragraphs: [
+      ["After decades of decline, the night train ",
+        R("enjoy a resurgence", "is becoming popular again", "is enjoying something of a resurgence",
+          "a resurgence is a return of something after a period when it was weak or less common.",
+          "There is no single C2 verb for 'become popular again'. 'Resurgence' is a noun, so it needs a verb partner: 'enjoy', 'experience' or 'undergo' a resurgence.",
+          "Vinyl records have experienced a remarkable resurgence among younger listeners."),
+        " across Europe. Several operators have ",
+        S("revived", "restarted", "brought back something that had stopped or declined.",
+          "A true swap with the same object ('routes'). 'Revive' fits especially well because the routes had been cut, so they are being brought back to life.",
+          "The festival was revived in 2015 after a twenty-year break."),
+        " routes that were cut in the early 2000s, and new lines now link several capital cities."],
+      [S("Proponents", "Supporters", "people who publicly support an idea, plan or course of action.",
+          "A true swap when the thing supported is an idea or policy, as here. You would not call football fans 'proponents' of a team.",
+          "Proponents of the four-day week say it improves both health and output."),
+        " say the appeal is ",
+        S("self-evident", "obvious", "so clear that it needs no proof or explanation.",
+          "Works after 'is' in the same way as 'obvious', but sounds more formal and argumentative. It doesn't replace 'obvious' before a noun as naturally ('an obvious mistake', not 'a self-evident mistake').",
+          "The benefits of the scheme were not as self-evident as its designers had assumed."),
+        ". Flying is faster, but a sleeper train lets you travel while you rest and arrive in the city centre rather than at a distant airport. For travellers worried about their carbon footprint, it also offers a way to cross a continent without flying."],
+      ["Yet the revival ",
+        R("a raft of", "faces many obstacles", "faces a raft of obstacles",
+          "a large number of things, usually problems, measures or proposals.",
+          "'Many' is a single determiner; 'a raft of' is a phrase that only goes with plural nouns and is typical of journalism. It sounds wrong with uncountable or pleasant things ('a raft of happiness').",
+          "The government announced a raft of measures to tackle rising rents."),
+        ". Tickets are often more expensive than flights, tracks are shared with freight trains, and ",
+        R("a patchwork of", "each country has its own set of rules", "operators must navigate a patchwork of national regulations",
+          "a mixture of many different parts, rules or systems that do not fit together neatly.",
+          "The idea of many separate rules cannot be swapped into one word. 'A patchwork of' needs a plural or uncountable noun after it, and 'navigate' is its natural verb partner.",
+          "Small businesses struggle with a patchwork of local tax rules."),
+        ", which makes international routes hard to run."],
+      [R("it remains to be seen", "It is not yet clear whether", "It remains to be seen whether",
+          "used to say that something is not yet known or certain.",
+          "A fixed expression. None of its words can be swapped in on their own; the whole opening has to change.",
+          "It remains to be seen whether the new rules will make any difference."),
+        " the night train can compete on a large scale. But for a growing number of passengers, the ",
+        S("allure", "charm", "the quality of being attractive, exciting or mysterious.",
+          "Works for the idea of travel, which has an exciting, slightly mysterious pull. Less natural for a person's character: a charming host has charm, not allure.",
+          "For many young actors, the allure of Hollywood is hard to resist."),
+        " of falling asleep in one country and waking up in another is reason enough to try."]
+    ]
+  }
+];
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const use = n => (window.claude && window.claude.use) ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+const plain = para => para.map(s => typeof s === "string" ? s : s.c1).join("");
+function toast(msg) {
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+}
+function lsGet(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+/* ---------- Storage: private per-person rows when signed in, browser storage otherwise ---------- */
+const store = {
+  col: null,
+  async init() {
+    const [db, user] = await Promise.all([use("db"), use("user")]);
+    if (!db || !user) return;
+    const uid = await user.id().catch(() => null);
+    if (!uid) return;
+    this.col = db.collection("data/users/" + uid);
+  },
+  async load() {
+    if (this.col) {
+      try {
+        const snap = await this.col.get();
+        const rows = snap.docs.filter(d => d.exists).map(d => ({ ...d.data(), id: d.id }));
+        return { passages: rows.filter(r => r.type === "passage"), words: rows.filter(r => r.type === "word") };
+      } catch (e) { this.col = null; }
+    }
+    return { passages: lsGet("c2r.passages", []), words: lsGet("c2r.words", []) };
+  },
+  async put(row) {
+    if (this.col) {
+      const { id, ...body } = row;
+      await this.col.doc(id).set(body);
+    } else {
+      const key = row.type === "passage" ? "c2r.passages" : "c2r.words";
+      const list = lsGet(key, []).filter(r => r.id !== row.id); list.push(row); lsSet(key, list);
+    }
+  },
+  async remove(row) {
+    if (this.col) await this.col.doc(row.id).delete();
+    else { const key = row.type === "passage" ? "c2r.passages" : "c2r.words"; lsSet(key, lsGet(key, []).filter(r => r.id !== row.id)); }
+  }
+};
+
+/* ---------- State ---------- */
+let passages = BUILTIN.slice();
+let words = [];
+let current = passages[0];
+let spots = [];
+let selected = null;
+let recall = true;
+const revealed = new Set();
+
+function prepare(p) {
+  spots = [];
+  p.paragraphs.forEach((para, pi) => para.forEach((s, si) => {
+    if (typeof s !== "string") { s._id = pi + "-" + si; s._n = spots.length + 1; s._pi = pi; spots.push(s); }
+  }));
+}
+const wordId = (p, s) => "w-" + p.id + "-" + s._id;
+const isSaved = s => words.some(w => w.id === wordId(current, s));
+
+/* ---------- Render: reading view ---------- */
+function renderPicker() {
+  $("pick").innerHTML = passages.map(p => `<option value="${esc(p.id)}"${p.id === current.id ? " selected" : ""}>${esc(p.title)}${p.builtin ? "" : " (yours)"}</option>`).join("");
+}
+function renderPassage() {
+  prepare(current);
+  const wc = current.paragraphs.map(plain).join(" ").split(/\s+/).length;
+  const html = current.paragraphs.map((para, pi) => {
+    const body = para.map(s => {
+      if (typeof s === "string") return esc(s);
+      const on = selected === s ? " on" : "";
+      if (s.kind === "swap") {
+        return `<button class="spot swap${on}" data-id="${s._id}" aria-label="${esc(s.c1)}: word swap ${s._n}">${esc(s.c1)}</button><span class="chip">${esc(s.c2)}</span>`;
+      }
+      return `<button class="spot rewrite${on}" data-id="${s._id}" aria-label="Rewrite ${s._n}">${esc(s.c1)}<sup>${s._n}</sup></button>`;
+    }).join("");
+    const rws = spots.filter(s => s._pi === pi && s.kind === "rewrite").map(s =>
+      `<div class="rw${selected === s ? " on" : ""}" data-id="${s._id}"><b>${s._n}</b><span>${esc(s.c2)}</span></div>`).join("");
+    return `<p>${body}</p>${rws}`;
+  }).join("");
+  const sheet = $("sheet");
+  sheet.innerHTML = `
+    <div class="meta"><span>${esc(current.origin || "Your passage")}</span><span>${wc} words</span><span>C1 text</span></div>
+    <h2 class="ptitle">${esc(current.title)}</h2>
+    <div class="passage">${html}</div>
+    ${current.builtin ? "" : `<p class="note" style="margin-top:24px"><button class="btn ghost" type="button" id="del-passage">Delete this passage</button></p>`}`;
+  const del = $("del-passage");
+  if (del) del.onclick = async () => {
+    if (del.dataset.armed !== "1") { del.dataset.armed = "1"; del.textContent = "Tap again to delete"; return; }
+    const p = current;
+    passages = passages.filter(x => x !== p); current = passages[0]; selected = null;
+    try { await store.remove(p); } catch (e) {}
+    renderPicker(); renderPassage(); renderDetail(); toast("Passage deleted");
+  };
+}
+
+function renderDetail() {
+  const d = $("detail");
+  const s = selected;
+  if (!s) {
+    d.className = "panel detail";
+    d.innerHTML = `<h3>Upgrade</h3><p class="empty">Tap an underlined word or phrase.</p>`;
+    return;
+  }
+  const saved = isSaved(s);
+  d.className = "panel detail open " + s.kind;
+  const head = s.kind === "swap"
+    ? `<div class="pair"><span class="from">${esc(s.c1)}</span><span class="to">${esc(s.c2)}</span></div>`
+    : `<div class="pair"><span class="focusw">${esc(s.focus)}</span><span class="from">${esc(s.c1)}</span><span class="to">${esc(s.c2)}</span></div>`;
+  d.innerHTML = `
+    <h3><span class="k-${s.kind}">${s.kind === "swap" ? "Word swap" : "Rewrite"}</span> <span style="margin-left:6px">${s._n} of ${spots.length}</span></h3>
+    ${head}
+    <dl>
+      <div><dt>Meaning</dt><dd>${esc(s.meaning || "")}</dd></div>
+      ${s.example ? `<div><dt>Another example</dt><dd class="ex">${esc(s.example)}</dd></div>` : ""}
+    </dl>
+    <div class="acts">
+      <button class="btn" type="button" id="save-btn">${saved ? "Saved" : "Save to my words"}</button>
+      <button class="btn ghost" type="button" id="next-btn">Next upgrade</button>
+      <button class="btn ghost close" type="button" id="close-btn">Close</button>
+    </div>`;
+  $("save-btn").onclick = () => toggleSave(s);
+  $("next-btn").onclick = () => select(spots[s._n % spots.length]);
+  $("close-btn").onclick = () => { selected = null; renderPassage(); renderDetail(); };
+}
+
+function select(s) {
+  selected = s;
+  renderPassage(); renderDetail();
+}
+
+async function toggleSave(s) {
+  const id = wordId(current, s);
+  const existing = words.find(w => w.id === id);
+  try {
+    if (existing) {
+      await store.remove(existing); words = words.filter(w => w !== existing); toast("Removed from your words");
+    } else {
+      const row = { id, type: "word", kind: s.kind, c1: s.c1, c2: s.c2, focus: s.focus || s.c2, meaning: s.meaning || "", note: s.note || "", example: s.example || "", passage: current.title, savedAt: Date.now() };
+      await store.put(row); words.push(row); toast("Saved to your words");
+    }
+  } catch (e) { toast("Couldn't save. Check your connection and try again."); }
+  renderDetail(); renderSaved();
+}
+
+/* ---------- Render: saved words ---------- */
+function renderSaved() {
+  $("saved-count").textContent = words.length;
+  const cards = $("cards");
+  if (!words.length) {
+    cards.innerHTML = `<p class="empty">No saved words yet. Open any upgrade in a passage and tap <b>Save to my words</b>.</p>`;
+  } else {
+    cards.innerHTML = words.slice().sort((a, b) => b.savedAt - a.savedAt).map(w => {
+      const hidden = recall && !revealed.has(w.id);
+      return `<div class="card ${w.kind}">
+        <div class="row"><span class="k-${w.kind}">${w.kind === "swap" ? "Word swap" : "Rewrite"}</span><small>${esc(w.passage)}</small></div>
+        <div class="ctx">${esc(w.c1)}</div>
+        ${hidden ? `<button class="btn ghost" type="button" data-show="${esc(w.id)}">Show C2 version</button>`
+                 : `<div class="ans">${esc(w.c2)}</div>
+                    <small>${esc(w.focus)}: ${esc(w.meaning)}</small>
+                    ${w.example ? `<small><i>${esc(w.example)}</i></small>` : ""}`}
+        <div class="row"><span></span><button class="lnk" type="button" data-rm="${esc(w.id)}">Remove</button></div>
+      </div>`;
+    }).join("");
+  }
+  $("store-note").textContent = store.col ? "Your passages and saved words are stored privately in your account." : "Your passages and saved words are stored in this browser only.";
+}
+$("cards").addEventListener("click", async e => {
+  const show = e.target.closest("[data-show]");
+  if (show) { revealed.add(show.dataset.show); renderSaved(); return; }
+  const rm = e.target.closest("[data-rm]");
+  if (rm) {
+    const w = words.find(x => x.id === rm.dataset.rm); if (!w) return;
+    try { await store.remove(w); words = words.filter(x => x !== w); } catch (err) { toast("Couldn't remove. Try again."); }
+    renderSaved(); if (selected) renderDetail();
+  }
+});
+
+/* ---------- Events ---------- */
+$("sheet").addEventListener("click", e => {
+  const el = e.target.closest("[data-id]"); if (!el) return;
+  const s = spots.find(x => x._id === el.dataset.id);
+  select(selected === s ? null : s);
+});
+$("pick").onchange = () => {
+  current = passages.find(p => p.id === $("pick").value) || passages[0];
+  selected = null; revealed.clear(); lsSet("c2r.current", current.id);
+  renderPassage(); renderDetail();
+};
+function setRecall(on) {
+  recall = on; revealed.clear();
+  $("recall-on").setAttribute("aria-pressed", on); $("recall-off").setAttribute("aria-pressed", !on);
+  renderSaved();
+}
+$("recall-on").onclick = () => setRecall(true);
+$("recall-off").onclick = () => setRecall(false);
+function showTab(t) {
+  ["read", "saved", "write"].forEach(n => { $("tab-" + n).setAttribute("aria-selected", t === n); $("view-" + n).hidden = t !== n; });
+  if (t === "saved") { revealed.clear(); renderSaved(); }
+  else if (t === "write") renderChips();
+  else renderPassage();
+}
+$("tab-read").onclick = () => showTab("read");
+$("tab-saved").onclick = () => showTab("saved");
+$("tab-write").onclick = () => showTab("write");
+$("go-write").onclick = () => showTab("write");
+
+/* ---------- Write ---------- */
+const draft = $("draft");
+draft.value = lsGet("c2r.draft", "");
+const stems = w => w.toLowerCase().split(/[^a-z-]+/).filter(x => x.length >= 4).map(x => x.length > 5 ? x.slice(0, -2) : x);
+const usedIn = (text, w) => { const t = text.toLowerCase(), st = stems(w); return st.length > 0 && st.every(x => t.includes(x)); };
+const practiceWords = () => [...new Set(words.map(w => w.focus || w.c2))];
+function renderChips() {
+  const list = practiceWords();
+  $("wchips-hint").textContent = list.length
+    ? "Tap a word to add it to your text. Words you've used get a tick."
+    : "Words you save while reading appear here. You can still write without them.";
+  $("wchips").innerHTML = list.map(w => `<button type="button" class="wchip${usedIn(draft.value, w) ? " used" : ""}" data-w="${esc(w)}">${esc(w)}</button>`).join("");
+  const n = draft.value.trim() ? draft.value.trim().split(/\s+/).length : 0;
+  $("wcount").textContent = n + (n === 1 ? " word" : " words");
+}
+draft.addEventListener("input", () => { lsSet("c2r.draft", draft.value); renderChips(); });
+$("wchips").addEventListener("click", e => {
+  const c = e.target.closest("[data-w]"); if (!c) return;
+  const w = c.dataset.w, a = draft.selectionStart ?? draft.value.length, b = draft.selectionEnd ?? a;
+  const before = draft.value.slice(0, a), pad = before && !/\s$/.test(before) ? " " : "";
+  draft.value = before + pad + w + " " + draft.value.slice(b);
+  const pos = (before + pad + w + " ").length;
+  draft.focus(); draft.setSelectionRange(pos, pos);
+  lsSet("c2r.draft", draft.value); renderChips();
+});
+
+function feedbackPrompt(text, list) {
+  return `You are an experienced English teacher. Your student is an advanced learner (CEFR C1) building active C2 vocabulary. They wrote the text below.${list.length ? ` They have been learning these C2 words and expressions and may have tried to use some of them (using them was optional): ${list.join("; ")}.` : ""}
+
+Student's text:
+"""
+${text}
+"""
+
+Give feedback as JSON with three parts:
+1. "summary": one or two warm, specific sentences on the writing overall.
+2. "used": for each of the learning words above that actually appears in the text (in any form), an object {"word", "sentence" (the student's sentence where it appears, copied exactly), "verdict" ("natural" or "adjust"), "comment" (one sentence on meaning, grammar, collocation or register), "better" (a corrected version of that sentence, only when verdict is "adjust")}. If none appear, return [].
+3. "paragraphs": the student's text, copied exactly, split into its paragraphs, each as {"segments": [...]}. Mark 3 to 6 spots where a genuinely C2 word or expression would lift the writing. For each spot decide:
+   - "swap" ONLY when one C2 word can replace the marked words in exactly this sentence with nothing else changing (same part of speech, grammar pattern and meaning, natural collocation). c1 = the student's exact words; c2 = the replacement.
+   - "rewrite" whenever a one-for-one swap would be wrong or unnatural. c1 = the student's exact phrase or sentence; c2 = a natural C2 rewrite of that span; focus = the C2 item it teaches.
+   When in doubt, use "rewrite". Each spot also has "meaning" (learner's-dictionary definition of the C2 item, max 20 words) and "example" (one new sentence using it in another context). Do not change anything outside the spots.
+
+Reply with only JSON in this shape:
+{"summary":"...","used":[{"word":"exacerbate","sentence":"...","verdict":"adjust","comment":"...","better":"..."}],"paragraphs":[{"segments":["Plain text ",{"kind":"swap","c1":"very important","c2":"paramount","focus":"paramount","meaning":"...","example":"..."}," more text."]}]}
+Joining each paragraph's plain strings and each spot's c1, in order, must reproduce the student's paragraph exactly.`;
+}
+
+let lastFeedback = null;
+function segHtml(paragraphs) {
+  return paragraphs.map(para => {
+    const body = para.map(s => typeof s === "string" ? esc(s)
+      : s.kind === "swap" ? `<span class="spot swap">${esc(s.c1)}</span><span class="chip">${esc(s.c2)}</span>`
+      : `<span class="spot rewrite">${esc(s.c1)}</span>`).join("");
+    const rws = para.filter(s => typeof s !== "string" && s.kind === "rewrite").map(s => `<div class="rw"><b>&rarr;</b><span>${esc(s.c2)}</span></div>`).join("");
+    return `<p>${body}</p>${rws}`;
+  }).join("");
+}
+function renderFeedback() {
+  const f = lastFeedback, el = $("feedback");
+  if (!f) { el.innerHTML = ""; return; }
+  const uses = f.used.length ? f.used.map(u => `
+      <div class="use">
+        <div class="w">${esc(u.word)} <span class="${u.verdict === "natural" ? "v-good" : "v-adjust"}">${u.verdict === "natural" ? "Used naturally" : "Needs adjusting"}</span></div>
+        ${u.sentence ? `<div class="s">${esc(u.sentence)}</div>` : ""}
+        <div>${esc(u.comment)}</div>
+        ${u.better && u.verdict !== "natural" ? `<div class="better"><b>Try</b>${esc(u.better)}</div>` : ""}
+      </div>`).join("") : `<p class="empty">You didn't use any of your saved words this time. That's fine. The upgrades below give you new ones to try.</p>`;
+  el.innerHTML = `
+    <div class="panel"><h3>Feedback</h3><p class="summary">${esc(f.summary)}</p></div>
+    <div class="panel"><h3>Your C2 words</h3><div class="uses">${uses}</div></div>
+    <div class="panel"><h3>C2 upgrades for your text</h3>
+      <div class="passage">${segHtml(f.paragraphs)}</div>
+      <div class="wbar"><span class="note">Open it in the reader to tap each upgrade and save the words you like.</span><button class="btn" type="button" id="fb-open">Open in reader</button></div>
+    </div>`;
+  $("fb-open").onclick = async () => {
+    const d = new Date();
+    const row = { id: "p-" + Date.now().toString(36), type: "passage", title: "My writing, " + d.toLocaleDateString(undefined, { day: "numeric", month: "short" }), origin: "Your writing", paragraphs: f.paragraphs.map(segs => ({ segments: segs })), createdAt: Date.now() };
+    try { await store.put(row); } catch (err) { toast("Opened, but it couldn't be saved."); }
+    const loaded = fromRow(row);
+    passages.push(loaded); current = loaded; selected = null;
+    renderPicker(); showTab("read"); renderDetail(); window.scrollTo({ top: 0 });
+  };
+}
+
+$("fb-go").onclick = async () => {
+  const status = $("fb-status"), text = draft.value.trim();
+  if (text.split(/\s+/).length < 25) { status.className = "status err"; status.textContent = "Write at least a few sentences (25+ words) to get feedback."; return; }
+  const sample = await use("sample");
+  if (!sample) { status.className = "status err"; status.textContent = "Feedback needs Claude, which isn't available in this view. Open the page on claude.ai while signed in."; return; }
+  $("fb-go").disabled = true; status.className = "status"; status.textContent = "Reading your text…";
+  try {
+    const raw = await sample.json(feedbackPrompt(text, practiceWords()), { modelTier: "complex", onText: () => { status.textContent = "Writing feedback…"; } });
+    const p = normalise(raw);
+    const str = v => typeof v === "string" ? v : "";
+    lastFeedback = {
+      summary: str(raw.summary),
+      used: (Array.isArray(raw.used) ? raw.used : []).filter(u => u && typeof u.word === "string")
+        .map(u => ({ word: u.word, sentence: str(u.sentence), verdict: u.verdict === "natural" ? "natural" : "adjust", comment: str(u.comment), better: str(u.better) })),
+      paragraphs: p.paragraphs
+    };
+    status.textContent = "";
+    renderFeedback();
+    $("feedback").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    const code = err && err.code;
+    status.className = "status err";
+    if (code === "not_granted" || code === "sampling_disabled") status.textContent = "This page hasn't been allowed to use Claude. Allow it from the page's Permissions menu, then try again.";
+    else if (code === "rate_limited") status.textContent = "You've hit your usage limit for now. Try again later.";
+    else status.textContent = "Something went wrong getting feedback. Tap Get feedback to try again.";
+  } finally { $("fb-go").disabled = false; }
+};
+
+/* ---------- Generator ---------- */
+let src = "topic", genCtl = null;
+function setSrc(v) {
+  src = v;
+  $("src-topic").setAttribute("aria-pressed", v === "topic"); $("src-adapt").setAttribute("aria-pressed", v === "adapt");
+  $("pane-topic").hidden = v !== "topic"; $("pane-adapt").hidden = v !== "adapt";
+}
+$("src-topic").onclick = () => setSrc("topic");
+$("src-adapt").onclick = () => setSrc("adapt");
+$("new-btn").onclick = () => { $("gen-status").textContent = ""; $("gen-status").className = "status"; $("gen").showModal(); };
+$("gen-cancel").onclick = () => { if (genCtl) genCtl.abort(); $("gen").close(); };
+
+function buildPrompt() {
+  const task = src === "topic"
+    ? `Write an original passage of 260-340 words on this topic: "${$("topic").value.trim()}".`
+    : `Rewrite the source text below as a passage of 260-340 words at CEFR C1 level, keeping its main content and argument. Source text:\n"""\n${$("source").value.trim()}\n"""`;
+  return `You are writing material for a reading app that helps advanced learners of English move from CEFR C1 to C2. The learner reads a C1 passage, and C2 language is shown beside it so they see how C2 words are really used.
+
+${task}
+
+1. The passage itself must be at C1 level: fluent and natural, varied but not showy. Do not use the C2 items in the passage text.
+2. Mark 6 to 9 spots where a C2 upgrade is natural. Choose genuinely C2 vocabulary or expressions (e.g. exacerbate, fleeting, a raft of, it remains to be seen), not B2/C1 words.
+3. For each spot decide its kind:
+   - "swap": ONLY when one C2 word (or a fixed compound) can replace the marked C1 word(s) in exactly this sentence with nothing else changing: same part of speech, same grammar pattern (transitivity, prepositions, complements), same meaning in this context, and natural collocation with the surrounding words. c1 = the exact C1 word(s) from the passage; c2 = the replacement, inflected to fit.
+   - "rewrite": whenever a one-for-one swap would be wrong or unnatural: different shade of meaning, different grammar, different word partners, or a fixed expression. c1 = the exact span from the passage (a phrase, clause or full sentence); c2 = a natural C2 rewrite of that same span that could replace it in the sentence; focus = the C2 word or expression the rewrite teaches.
+   When in doubt, choose "rewrite". Never force a C2 word into a slot where it does not belong.
+4. For every spot also give: meaning (a learner's-dictionary definition of the C2 item, max 20 words), example (one new sentence using the C2 item in a different context).
+
+Reply with only JSON in this shape:
+{"title":"Short title","paragraphs":[{"segments":["Plain text before ",{"kind":"swap","c1":"laziness","c2":"indolence","focus":"indolence","meaning":"...","example":"..."},", plain text after."]}]}
+
+Segment rules: each paragraph's segments are plain strings and spot objects in reading order. Joining the plain strings and each spot's c1, in order, must reproduce the paragraph exactly, so put spaces and punctuation in the plain strings. Use 3 to 5 paragraphs. Spots must not overlap.`;
+}
+
+function normalise(raw) {
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.paragraphs)) throw new Error("shape");
+  let count = 0;
+  const paragraphs = raw.paragraphs.map(p => {
+    const segs = Array.isArray(p) ? p : (p && Array.isArray(p.segments) ? p.segments : []);
+    return segs.map(s => {
+      if (typeof s === "string") return s;
+      if (!s || typeof s !== "object" || typeof s.c1 !== "string" || typeof s.c2 !== "string" || !s.c1.trim()) return null;
+      count++;
+      const kind = s.kind === "swap" ? "swap" : "rewrite";
+      const str = v => typeof v === "string" ? v : "";
+      return { kind, c1: s.c1, c2: s.c2, focus: str(s.focus) || s.c2, meaning: str(s.meaning), note: str(s.note), example: str(s.example) };
+    }).filter(s => s !== null);
+  }).filter(p => p.length);
+  if (!paragraphs.length || !count) throw new Error("empty");
+  return { title: typeof raw.title === "string" && raw.title.trim() ? raw.title.trim() : "Untitled passage", paragraphs };
+}
+
+$("gen-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const status = $("gen-status");
+  if (src === "topic" && !$("topic").value.trim()) { status.className = "status err"; status.textContent = "Enter a topic first."; return; }
+  if (src === "adapt" && $("source").value.trim().split(/\s+/).length < 60) { status.className = "status err"; status.textContent = "Paste at least a paragraph or two (60+ words) to adapt."; return; }
+  const sample = await use("sample");
+  if (!sample) { status.className = "status err"; status.textContent = "Creating passages needs Claude, which isn't available in this view. Open the page on claude.ai while signed in."; return; }
+  genCtl = new AbortController();
+  $("gen-go").disabled = true; status.className = "status"; status.textContent = "Writing the C1 passage and marking C2 upgrades. This takes about a minute.";
+  try {
+    const raw = await sample.json(buildPrompt(), {
+      modelTier: "complex", signal: genCtl.signal,
+      onText: ({ text }) => { status.textContent = `Writing… ${Math.round(text.length / 6)} words so far`; }
+    });
+    const p = normalise(raw);
+    const row = { id: "p-" + Date.now().toString(36), type: "passage", title: p.title, origin: src === "topic" ? "Generated · " + $("topic").value.trim() : "Adapted from your text", paragraphs: p.paragraphs.map(segs => ({ segments: segs })), createdAt: Date.now() };
+    try { await store.put(row); } catch (err) { toast("Showing the passage, but it couldn't be saved."); }
+    const loaded = fromRow(row);
+    passages.push(loaded); current = loaded; selected = null; revealed.clear();
+    renderPicker(); renderPassage(); renderDetail(); showTab("read");
+    $("gen").close(); $("topic").value = ""; $("source").value = "";
+  } catch (err) {
+    const code = err && err.code;
+    status.className = "status err";
+    if (code === "cancelled") status.textContent = "";
+    else if (code === "not_granted" || code === "sampling_disabled") status.textContent = "This page hasn't been allowed to use Claude. Allow it from the page's Permissions menu, then try again.";
+    else if (code === "rate_limited") status.textContent = "You've hit your usage limit for now. Try again later.";
+    else if (code === "invalid_json" || (err && (err.message === "shape" || err.message === "empty"))) status.textContent = "The reply came back in the wrong format. Tap Create passage to try again.";
+    else status.textContent = "Something went wrong creating the passage. Tap Create passage to try again.";
+  } finally { $("gen-go").disabled = false; genCtl = null; }
+});
+
+function fromRow(r) {
+  return { id: r.id, type: "passage", title: r.title, origin: r.origin, createdAt: r.createdAt,
+    paragraphs: (r.paragraphs || []).map(p => (p.segments || []).map(s => typeof s === "string" ? s : { ...s })) };
+}
+
+/* ---------- Boot ---------- */
+renderPicker(); renderPassage(); renderDetail(); renderSaved();
+(async () => {
+  await store.init();
+  const data = await store.load();
+  words = data.words || [];
+  const mine = (data.passages || []).map(fromRow).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  passages = BUILTIN.concat(mine);
+  const last = lsGet("c2r.current", null);
+  const found = passages.find(p => p.id === last);
+  if (found && found !== current) { current = found; selected = null; }
+  renderPicker(); renderPassage(); renderDetail(); renderSaved(); renderChips();
+})();
+</script>
