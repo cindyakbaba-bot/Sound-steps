@@ -1,0 +1,13 @@
+{
+  "max_items_per_source": 30,
+  "filters": {
+    "include": [],
+    "exclude": ["sponsored", "advertisement"],
+    "max_age_hours": 48
+  },
+  "sources": [
+    { "name": "BBC News", "url": "https://feeds.bbci.co.uk/news/rss.xml" },
+    { "name": "Hacker News", "url": "https://hnrss.org/frontpage" },
+    { "name": "NPR News", "url": "https://feeds.npr.org/1001/rss.xml" }
+  ]
+}
